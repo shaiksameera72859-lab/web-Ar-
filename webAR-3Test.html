@@ -10,11 +10,17 @@
   #cam { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
   /* Transparent WebGL layer for the hologram */
   #gl  { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; }
+  /* One-time status message (ready / failed) */
+  #msg { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom, 0px) + 28px); transform:translateX(-50%);
+         padding:10px 18px; border-radius:20px; background:rgba(0,0,0,.55); color:#fff; font:500 15px/1.2 system-ui, sans-serif;
+         pointer-events:none; opacity:0; transition:opacity .5s; white-space:nowrap; }
+  #msg.show { opacity:1; }
 </style>
 </head>
 <body>
 <video id="cam" autoplay muted playsinline></video>
 <canvas id="gl"></canvas>
+<div id="msg"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
@@ -149,9 +155,9 @@ if (!MIRROR) cam.style.transform = 'none';
 const HAND_TIMEOUT = IS_MOBILE ? 1.0 : 0.35;    // seconds before a missing hand is considered gone
 const NEAR_MIN     = IS_MOBILE ? 0.32 : 0.14;   // min grab radius (fraction of shorter screen side)
 const NEAR_MULT    = IS_MOBILE ? 2.4 : 1.25;    // grab radius vs. projected cube radius
-const IDLE_ROT     = IS_MOBILE ? { x: 0, y: 0 } : AUTO_ROT;   // no automatic rotation on mobile
-const IDLE_BOB     = IS_MOBILE ? 0 : 0.05;                    // no automatic floating on mobile
-if (IS_MOBILE) { rotVel.x = 0; rotVel.y = 0; }
+const IDLE_ROT     = { x: 0, y: 0 };   // no automatic rotation (laptop and mobile)
+const IDLE_BOB     = 0;                // no automatic floating (laptop and mobile)
+rotVel.x = 0; rotVel.y = 0;            // cube starts perfectly still
 
 /** Map a normalised MediaPipe landmark to screen pixels (accounts for object-fit:cover + mirroring). */
 function toScreen(l) {
@@ -283,6 +289,13 @@ requestAnimationFrame(frame);
 /* ============================ CAMERA + MEDIAPIPE ============================ */
 let camStarted = false, hands = null, busy = false, lastVideoTime = -1;
 
+/** Shows a short status message, then fades it out. */
+function showMsg(text, ms) {
+  const el = document.getElementById('msg');
+  el.textContent = text; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
 async function startCamera() {
   if (camStarted) return;
   try {
@@ -309,9 +322,17 @@ async function startCamera() {
 async function startTracking() {
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}` });
-  hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: isMobile ? 0.7 : 0.6, minTrackingConfidence: 0.5 });
+  hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: isMobile ? 0.5 : 0.6, minTrackingConfidence: 0.5 });
   hands.onResults(onResults);
-  try { await hands.initialize(); } catch (e) { console.warn('Hands init failed', e); return; }
+  try {
+    await hands.initialize();                 // downloads/compiles the hand model
+    await hands.send({ image: cam });         // warm-up inference proves the model really runs
+  } catch (e) {
+    console.warn('Hands init failed', e);
+    showMsg('Hand tracking failed to load', 6000);
+    return;
+  }
+  showMsg('Ready \u2014 move your hand toward the cube', 4000);
 
   const pump = async () => {
     if (!busy && cam.readyState >= 2 && cam.currentTime !== lastVideoTime) {
