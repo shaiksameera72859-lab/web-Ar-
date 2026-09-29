@@ -144,6 +144,15 @@ const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userA
 const MIRROR = !IS_MOBILE;
 if (!MIRROR) cam.style.transform = 'none';
 
+/* Mobile-only tuning: phone inference is slower and the hand appears smaller/farther via the rear camera.
+   Desktop values are exactly the original ones. Also on mobile the cube stays still until a hand interacts. */
+const HAND_TIMEOUT = IS_MOBILE ? 1.0 : 0.35;    // seconds before a missing hand is considered gone
+const NEAR_MIN     = IS_MOBILE ? 0.32 : 0.14;   // min grab radius (fraction of shorter screen side)
+const NEAR_MULT    = IS_MOBILE ? 2.4 : 1.25;    // grab radius vs. projected cube radius
+const IDLE_ROT     = IS_MOBILE ? { x: 0, y: 0 } : AUTO_ROT;   // no automatic rotation on mobile
+const IDLE_BOB     = IS_MOBILE ? 0 : 0.05;                    // no automatic floating on mobile
+if (IS_MOBILE) { rotVel.x = 0; rotVel.y = 0; }
+
 /** Map a normalised MediaPipe landmark to screen pixels (accounts for object-fit:cover + mirroring). */
 function toScreen(l) {
   const vw = cam.videoWidth || 640, vh = cam.videoHeight || 480;
@@ -189,13 +198,13 @@ function onResults(res) {
 /** Is the palm close to the cube's projected position? (hysteresis) */
 const _v = new THREE.Vector3();
 function updateInteraction(dt, now) {
-  if (hand.present && now - hand.lastSeen > 0.35) hand.present = false;
+  if (hand.present && now - hand.lastSeen > HAND_TIMEOUT) hand.present = false;
   if (!hand.present) { interacting = false; hand.vx *= 0.8; hand.vy *= 0.8; return; }
   _v.copy(root.position); _v.y += 0; _v.project(camera);
   const cx = (_v.x * 0.5 + 0.5) * W, cy = (-_v.y * 0.5 + 0.5) * H;
   const pxPerUnit = H / visH;
   const R = EDGE * 0.5 * 1.5 * scaleCur * pxPerUnit;          // approx. projected radius
-  const near = Math.max(R * 1.25, 0.14 * Math.min(W, H));
+  const near = Math.max(R * NEAR_MULT, NEAR_MIN * Math.min(W, H));
   const dist = Math.hypot(hand.px - cx, hand.py - cy);
   interacting = interacting ? dist < near * 1.5 : dist < near;
 }
@@ -222,14 +231,14 @@ function frame() {
     hand.vx *= Math.exp(-dt * 5); hand.vy *= Math.exp(-dt * 5);   // stops smoothly when hand stops
   } else {
     const k = 1 - Math.exp(-dt * 1.5);
-    rotVel.x = lerp(rotVel.x, AUTO_ROT.x, k);
-    rotVel.y = lerp(rotVel.y, AUTO_ROT.y, k);
+    rotVel.x = lerp(rotVel.x, IDLE_ROT.x, k);
+    rotVel.y = lerp(rotVel.y, IDLE_ROT.y, k);
   }
   rotor.rotation.x += rotVel.x * dt;
   rotor.rotation.y += rotVel.y * dt;
 
   /* floating: fixed place, gentle bob */
-  root.position.y = Math.sin(t * 0.9) * 0.05;
+  root.position.y = Math.sin(t * 0.9) * IDLE_BOB;
 
   /* interaction glow */
   glowAmt = lerp(glowAmt, interacting ? 1 : 0, 1 - Math.exp(-dt * 6));
@@ -300,7 +309,7 @@ async function startCamera() {
 async function startTracking() {
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}` });
-  hands.setOptions({ maxNumHands: 1, modelComplexity: isMobile ? 0 : 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+  hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: isMobile ? 0.7 : 0.6, minTrackingConfidence: 0.5 });
   hands.onResults(onResults);
   try { await hands.initialize(); } catch (e) { console.warn('Hands init failed', e); return; }
 
