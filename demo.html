@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ESP32 Foot Step Counter</title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+
+        body {
+
+            min-height: 100vh;
+
+            font-family: Arial, sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at top,
+                    #123b4a 0%,
+                    #07131b 45%,
+                    #03080c 100%
+                );
+
+            color: white;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            padding: 20px;
+        }
+
+
+        .container {
+
+            width: 100%;
+
+            max-width: 650px;
+
+            background: rgba(8, 18, 25, 0.95);
+
+            border: 1px solid rgba(0, 255, 200, 0.25);
+
+            border-radius: 25px;
+
+            padding: 35px;
+
+            text-align: center;
+
+            box-shadow:
+                0 0 50px rgba(0, 255, 200, 0.12);
+        }
+
+
+        h1 {
+
+            font-size: 34px;
+
+            margin-bottom: 10px;
+        }
+
+
+        .subtitle {
+
+            color: #9fb3bd;
+
+            font-size: 16px;
+
+            margin-bottom: 30px;
+        }
+
+
+        .connection-box {
+
+            display: flex;
+
+            gap: 10px;
+
+            width: 100%;
+
+            margin-bottom: 20px;
+        }
+
+
+        .ip-input {
+
+            flex: 1;
+
+            min-width: 0;
+
+            padding: 15px;
+
+            border-radius: 12px;
+
+            border: 1px solid #30434d;
+
+            background: #101c23;
+
+            color: white;
+
+            font-size: 16px;
+
+            outline: none;
+        }
+
+
+        .ip-input:focus {
+
+            border-color: #00e6a8;
+
+            box-shadow:
+                0 0 10px rgba(0, 230, 168, 0.2);
+        }
+
+
+        .connect-button {
+
+            padding: 15px 22px;
+
+            border: none;
+
+            border-radius: 12px;
+
+            background: #00e6a8;
+
+            color: #03130f;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+
+            white-space: nowrap;
+        }
+
+
+        .connect-button:hover {
+
+            transform: translateY(-1px);
+
+            opacity: 0.9;
+        }
+
+
+        .status {
+
+            min-height: 22px;
+
+            margin-bottom: 25px;
+
+            font-size: 15px;
+
+            color: #ffcc66;
+        }
+
+
+        .step-card {
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #0d1c24,
+                    #081218
+                );
+
+            border-radius: 22px;
+
+            padding: 40px 20px;
+
+            border: 1px solid rgba(0, 230, 168, 0.2);
+
+            box-shadow:
+                inset 0 0 30px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .label {
+
+            color: #91a5af;
+
+            font-size: 15px;
+
+            letter-spacing: 2px;
+
+            margin-bottom: 15px;
+        }
+
+
+        #stepCount {
+
+            font-size: 100px;
+
+            font-weight: bold;
+
+            line-height: 1;
+
+            color: #00e6a8;
+
+            text-shadow:
+                0 0 25px rgba(0, 230, 168, 0.3);
+        }
+
+
+        .steps-text {
+
+            margin-top: 15px;
+
+            font-size: 18px;
+
+            color: #d8e4e8;
+        }
+
+
+        .reset-button {
+
+            margin-top: 25px;
+
+            padding: 14px 25px;
+
+            border: none;
+
+            border-radius: 12px;
+
+            background: #ff5275;
+
+            color: white;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        .reset-button:hover {
+
+            opacity: 0.85;
+        }
+
+
+        .info {
+
+            margin-top: 25px;
+
+            padding: 15px;
+
+            border-radius: 12px;
+
+            background: rgba(255, 255, 255, 0.03);
+
+            color: #82959f;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+
+        .footer {
+
+            margin-top: 22px;
+
+            color: #586b74;
+
+            font-size: 12px;
+        }
+
+
+        @media (max-width: 600px) {
+
+            .container {
+                padding: 25px 18px;
+            }
+
+
+            h1 {
+                font-size: 27px;
+            }
+
+
+            .connection-box {
+                flex-direction: column;
+            }
+
+
+            .connect-button {
+                width: 100%;
+            }
+
+
+            #stepCount {
+                font-size: 75px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="container">
+
+
+        <h1>🚶 Foot Step Counter</h1>
+
+
+        <div class="subtitle">
+            ESP32 + MPU6050 Live Step Monitoring
+        </div>
+
+
+        <!-- ESP32 IP address section -->
+
+        <div class="connection-box">
+
+            <input
+                type="text"
+                id="ipAddress"
+                class="ip-input"
+                value="192.168.4.1"
+                placeholder="Enter ESP32 IP Address"
+            >
+
+
+            <button
+                class="connect-button"
+                onclick="connectESP32()">
+
+                Connect ESP32
+
+            </button>
+
+        </div>
+
+
+        <!-- Connection status -->
+
+        <div
+            id="status"
+            class="status">
+
+            ● Not Connected
+
+        </div>
+
+
+        <!-- Step counter card -->
+
+        <div class="step-card">
+
+
+            <div class="label">
+                TOTAL STEPS
+            </div>
+
+
+            <div id="stepCount">
+                0
+            </div>
+
+
+            <div class="steps-text">
+                Steps Detected
+            </div>
+
+
+        </div>
+
+
+        <!-- Reset button -->
+
+        <button
+            class="reset-button"
+            onclick="resetSteps()">
+
+            Reset Steps
+
+        </button>
+
+
+        <!-- Information -->
+
+        <div class="info">
+
+            Make sure your laptop is connected to
+            <strong>ESP32-StepCounter</strong>
+            Wi-Fi before pressing Connect.
+
+            <br>
+
+            ESP32 IP:
+            <strong>192.168.4.1</strong>
+
+        </div>
+
+
+        <div class="footer">
+
+            ESP32 Foot Step Counter
+
+        </div>
+
+
+    </div>
+
+
+
+    <script>
+
+
+        // Store the ESP32 IP address
+        let esp32IP = "192.168.4.1";
+
+
+        // Store the update timer
+        let updateTimer = null;
+
+
+        // Store the last displayed step count
+        let lastStepCount = 0;
+
+
+
+        // ------------------------------------------------
+        // Connect to ESP32
+        // ------------------------------------------------
+
+        function connectESP32() {
+
+
+            // Get the IP address from the input box
+            esp32IP =
+                document
+                .getElementById("ipAddress")
+                .value
+                .trim();
+
+
+            // Remove http:// if the user enters it
+            esp32IP =
+                esp32IP
+                .replace("http://", "")
+                .replace("https://", "")
+                .replace(/\/$/, "");
+
+
+            // Check if IP address is empty
+            if (!esp32IP) {
+
+                setStatus(
+                    "● Please enter ESP32 IP address",
+                    "#ffcc66"
+                );
+
+                return;
+            }
+
+
+            // Show connecting status
+            setStatus(
+                "● Connecting to ESP32...",
+                "#ffcc66"
+            );
+
+
+            // Stop previous update timer
+            if (updateTimer !== null) {
+
+                clearInterval(updateTimer);
+
+                updateTimer = null;
+            }
+
+
+            // Get data immediately
+            getStepData();
+
+
+            // Get new step data every 500 milliseconds
+            updateTimer =
+                setInterval(
+                    getStepData,
+                    500
+                );
+
+        }
+
+
+
+        // ------------------------------------------------
+        // Get live step count from ESP32
+        // ------------------------------------------------
+
+        async function getStepData() {
+
+
+            try {
+
+
+                // Send request to ESP32 /data endpoint
+                const response =
+                    await fetch(
+                        "http://" +
+                        esp32IP +
+                        "/data"
+                    );
+
+
+                // Check if ESP32 returned a successful response
+                if (!response.ok) {
+
+                    throw new Error(
+                        "ESP32 returned an error"
+                    );
+                }
+
+
+                // Convert response to JSON
+                const data =
+                    await response.json();
+
+
+                // Make sure steps value exists
+                if (
+                    typeof data.steps !== "number"
+                ) {
+
+                    throw new Error(
+                        "Invalid step data"
+                    );
+                }
+
+
+                // Store current step count
+                lastStepCount = data.steps;
+
+
+                // Display step count
+                document
+                    .getElementById("stepCount")
+                    .innerText =
+                    data.steps;
+
+
+                // Show connected status
+                setStatus(
+                    "● Connected to ESP32",
+                    "#00e6a8"
+                );
+
+
+            }
+
+
+            catch (error) {
+
+
+                // Show connection error
+                setStatus(
+                    "● ESP32 Not Connected",
+                    "#ff5275"
+                );
+
+
+                console.log(
+                    "ESP32 connection error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+
+        // ------------------------------------------------
+        // Reset step counter
+        // ------------------------------------------------
+
+        async function resetSteps() {
+
+
+            try {
+
+
+                // Send reset request to ESP32
+                const response =
+                    await fetch(
+                        "http://" +
+                        esp32IP +
+                        "/reset"
+                    );
+
+
+                // Check response
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Reset request failed"
+                    );
+                }
+
+
+                // Get reset response
+                const data =
+                    await response.json();
+
+
+                // Update displayed count
+                document
+                    .getElementById("stepCount")
+                    .innerText =
+                    data.steps;
+
+
+                // Update stored count
+                lastStepCount = data.steps;
+
+
+                // Show status
+                setStatus(
+                    "● Steps Reset Successfully",
+                    "#00e6a8"
+                );
+
+
+            }
+
+
+            catch (error) {
+
+
+                setStatus(
+                    "● Reset Failed",
+                    "#ff5275"
+                );
+
+
+                console.log(
+                    "Reset error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+
+        // ------------------------------------------------
+        // Update connection status
+        // ------------------------------------------------
+
+        function setStatus(message, color) {
+
+
+            const status =
+                document.getElementById("status");
+
+
+            status.innerText = message;
+
+            status.style.color = color;
+
+        }
+
+
+    </script>
+
+
+</body>
+
+</html>
