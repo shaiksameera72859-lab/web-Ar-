@@ -1839,11 +1839,11 @@ function startHandTracking() {
 
         maxNumHands: 1,
 
-        modelComplexity: 1,
+        modelComplexity: 0,
 
-        minDetectionConfidence: 0.55,
+        minDetectionConfidence: 0.45,
 
-        minTrackingConfidence: 0.55
+        minTrackingConfidence: 0.45
     });
 
 
@@ -1857,31 +1857,28 @@ function startHandTracking() {
         the already running video element.
     */
 
-    handCamera =
-        new Camera(
-            video,
-            {
-
-                onFrame: async function() {
-
-                    if (
-                        arStarted &&
-                        video.readyState >= 2
-                    ) {
-
-                        await hands.send({
-                            image: video
-                        });
-                    }
-                },
-
-                width: 640,
-                height: 480
+    handCamera = new Camera(
+    video,
+    {
+        onFrame: async function() {
+            if (
+                arStarted &&
+                video.readyState >= 2 &&
+                video.videoWidth > 0 &&
+                video.videoHeight > 0
+            ) {
+                await hands.send({
+                    image: video
+                });
             }
-        );
+        },
 
+        width: 640,
+        height: 480
+    }
+);
 
-    handCamera.start();
+handCamera.start();
 }
 
 
@@ -1952,11 +1949,8 @@ function onHandResults(results) {
         Far fingers = big cube.
     */
 
-    const minDistance =
-        0.035;
-
-    const maxDistance =
-        0.25;
+    const minDistance = 0.025;
+const maxDistance = 0.30;
 
 
     let normalized =
@@ -1985,11 +1979,8 @@ function onHandResults(results) {
         same value.
     */
 
-    const minScale =
-        0.35;
-
-    const maxScale =
-        1.25;
+    const minScale = 0.35;
+const maxScale = 1.25;
 
 
     handScaleTarget =
