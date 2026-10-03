@@ -1,543 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0,
-               maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>AI WebAR Hologram Cube</title>
 
-
-<!-- =====================================================
-     THREE.JS
-===================================================== -->
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-
-
-<!-- =====================================================
-     OPENCV
-===================================================== -->
-
-<script async
-        src="https://docs.opencv.org/4.x/opencv.js">
-</script>
-
-
-<!-- =====================================================
-     MEDIAPIPE HANDS
-===================================================== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://docs.opencv.org/4.x/opencv.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
 <style>
-
-/* =====================================================
-   GLOBAL
-===================================================== */
-
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
 html,
 body {
-
+    margin: 0;
     width: 100%;
     height: 100%;
-
     overflow: hidden;
-
-    background: #000;
-
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
+    background: #02050a;
+    font-family: Arial, Helvetica, sans-serif;
 }
-
-
-/* =====================================================
-   CAMERA
-===================================================== */
 
 #camera {
-
     position: fixed;
-
     inset: 0;
-
     width: 100%;
     height: 100%;
-
     object-fit: cover;
-
-    background: #000;
-
     z-index: 1;
+    background: #000;
 }
-
-
-/* =====================================================
-   THREE.JS CANVAS
-===================================================== */
 
 #threeCanvas {
-
     position: fixed;
-
     inset: 0;
-
     width: 100%;
     height: 100%;
-
+    z-index: 3;
     pointer-events: none;
-
-    z-index: 5;
 }
 
-
-/* =====================================================
-   START SCREEN
-===================================================== */
-
 #startScreen {
-
     position: fixed;
-
     inset: 0;
-
-    z-index: 50;
+    z-index: 20;
 
     display: flex;
-
     align-items: center;
-
     justify-content: center;
 
-    padding: 20px;
+    background:
+        radial-gradient(circle at center,
+            rgba(0,255,170,0.10),
+            rgba(0,0,0,0.96) 65%);
+
+    color: white;
+}
+
+.startBox {
+    width: min(90%, 430px);
+    padding: 32px 25px;
 
     text-align: center;
 
-    color: white;
+    border: 1px solid rgba(0,255,170,0.35);
+    border-radius: 22px;
 
-    background:
-
-        radial-gradient(
-            circle at 50% 40%,
-            rgba(0,255,255,0.16),
-            transparent 25%
-        ),
-
-        radial-gradient(
-            circle at 30% 70%,
-            rgba(255,0,255,0.10),
-            transparent 30%
-        ),
-
-        #02030a;
-}
-
-
-.startBox {
-
-    width:
-        min(430px, 92vw);
-
-    padding:
-        34px 26px;
-
-    border:
-        1px solid rgba(0,255,255,0.35);
-
-    border-radius:
-        26px;
-
-    background:
-        rgba(5,8,20,0.86);
-
-    backdrop-filter:
-        blur(14px);
+    background: rgba(2,10,15,0.82);
 
     box-shadow:
+        0 0 40px rgba(0,255,170,0.12),
+        inset 0 0 30px rgba(0,255,170,0.04);
 
-        0 0 25px
-        rgba(0,255,255,0.15),
-
-        0 0 70px
-        rgba(170,0,255,0.10),
-
-        inset 0 0 30px
-        rgba(0,255,255,0.04);
+    backdrop-filter: blur(12px);
 }
-
 
 .startBox h1 {
-
-    font-size:
-        clamp(24px, 6vw, 32px);
-
-    margin-bottom:
-        14px;
-
-    background:
-        linear-gradient(
-            90deg,
-            #00ffff,
-            #7c3cff,
-            #ff2bd6,
-            #00ffff
-        );
-
-    background-size:
-        300% 100%;
-
-    -webkit-background-clip:
-        text;
-
-    background-clip:
-        text;
-
-    color:
-        transparent;
-
-    animation:
-        titleFlow 4s linear infinite;
+    margin: 0 0 10px;
+    font-size: 27px;
+    letter-spacing: 1px;
 }
-
-
-@keyframes titleFlow {
-
-    0% {
-        background-position: 0% 50%;
-    }
-
-    100% {
-        background-position: 300% 50%;
-    }
-}
-
 
 .startBox p {
-
-    color:
-        #d5def5;
-
-    font-size:
-        14px;
-
-    line-height:
-        1.65;
-
-    margin-bottom:
-        25px;
+    margin: 8px 0;
+    color: #a9c9c2;
+    line-height: 1.5;
 }
-
 
 #startButton {
+    margin-top: 20px;
+    padding: 14px 30px;
 
-    border:
-        none;
+    border: 1px solid #00ffb3;
+    border-radius: 12px;
 
-    padding:
-        15px 34px;
+    background: rgba(0,255,179,0.10);
+    color: #00ffb3;
 
-    border-radius:
-        999px;
+    font-size: 16px;
+    font-weight: bold;
 
-    cursor:
-        pointer;
-
-    font-size:
-        16px;
-
-    font-weight:
-        bold;
-
-    color:
-        #fff;
-
-    background:
-
-        linear-gradient(
-            90deg,
-            #00d9ff,
-            #7c3cff,
-            #ff2bd6
-        );
-
-    background-size:
-        200% 100%;
+    cursor: pointer;
 
     box-shadow:
+        0 0 20px rgba(0,255,179,0.25);
 
-        0 0 18px
-        rgba(0,255,255,0.55),
-
-        0 0 40px
-        rgba(180,0,255,0.25);
-
-    transition:
-        transform 0.2s ease;
+    transition: 0.2s;
 }
-
 
 #startButton:hover {
-
-    transform:
-        scale(1.05);
+    background: rgba(0,255,179,0.20);
+    transform: scale(1.03);
 }
 
-
-/* =====================================================
-   STATUS
-===================================================== */
-
-#statusPanel {
-
+#status {
     position: fixed;
-
     top: 15px;
     left: 15px;
 
-    z-index: 15;
+    z-index: 10;
 
-    min-width:
-        205px;
+    padding: 10px 14px;
 
-    padding:
-        11px 14px;
+    border-radius: 10px;
 
-    border-radius:
-        13px;
+    background: rgba(0,0,0,0.58);
+    border: 1px solid rgba(0,255,179,0.28);
 
-    background:
-        rgba(0,0,0,0.62);
+    color: #00ffb3;
 
-    border:
-        1px solid
-        rgba(0,255,255,0.30);
+    font-size: 13px;
 
-    color:
-        white;
-
-    backdrop-filter:
-        blur(10px);
-
-    box-shadow:
-        0 0 18px
-        rgba(0,255,255,0.08);
+    backdrop-filter: blur(8px);
 }
-
-
-#status {
-
-    color:
-        #00ffff;
-
-    font-size:
-        12px;
-
-    font-weight:
-        bold;
-
-    margin-bottom:
-        5px;
-}
-
-
-#confidence {
-
-    color:
-        #9ca9c7;
-
-    font-size:
-        11px;
-}
-
-
-#handStatus {
-
-    color:
-        #ff72e8;
-
-    font-size:
-        11px;
-
-    margin-top:
-        4px;
-
-    font-weight:
-        bold;
-}
-
-
-/* =====================================================
-   INSTRUCTIONS
-===================================================== */
 
 #instructions {
-
     position: fixed;
-
-    left: 50%;
-
     bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
 
-    transform:
-        translateX(-50%);
+    z-index: 10;
 
-    z-index: 15;
+    width: min(92%, 520px);
 
-    width:
-        min(470px, 92vw);
+    padding: 12px 16px;
 
-    padding:
-        11px 15px;
+    text-align: center;
 
-    border-radius:
-        15px;
+    border-radius: 14px;
 
-    text-align:
-        center;
+    background: rgba(0,0,0,0.58);
+    border: 1px solid rgba(0,255,179,0.20);
 
-    color:
-        #e8f4ff;
+    color: #c7ddd8;
 
-    background:
-        rgba(0,0,0,0.62);
+    font-size: 13px;
 
-    border:
-        1px solid
-        rgba(0,255,255,0.22);
-
-    backdrop-filter:
-        blur(10px);
-
-    font-size:
-        12px;
-
-    line-height:
-        1.5;
+    backdrop-filter: blur(8px);
 }
-
-
-/* =====================================================
-   HIDDEN CANVASES
-===================================================== */
 
 #processingCanvas,
 #handCanvas {
-
-    display:
-        none;
+    display: none;
 }
-
-
-/* =====================================================
-   MOBILE
-===================================================== */
-
-@media (max-width: 600px) {
-
-    #statusPanel {
-
-        top: 10px;
-        left: 10px;
-
-        min-width:
-            175px;
-
-        padding:
-            8px 10px;
-    }
-
-    #instructions {
-
-        bottom: 10px;
-
-        font-size:
-            11px;
-
-        padding:
-            9px 12px;
-    }
-
-    .startBox {
-
-        padding:
-            30px 20px;
-    }
-
-}
-
 </style>
-
 </head>
-
 
 <body>
 
-
-<!-- =====================================================
-     CAMERA
-===================================================== -->
-
-<video
-    id="camera"
-    autoplay
-    muted
-    playsinline>
-</video>
-
-
-<!-- =====================================================
-     THREE.JS
-===================================================== -->
+<video id="camera" autoplay playsinline muted></video>
 
 <canvas id="threeCanvas"></canvas>
 
+<canvas id="processingCanvas"></canvas>
+<canvas id="handCanvas"></canvas>
 
-<!-- =====================================================
-     START SCREEN
-===================================================== -->
+<div id="status">
+    Waiting for AR...
+</div>
+
+<div id="instructions">
+    Show the marker to the camera. When your hand appears,
+    move your thumb and index finger closer or farther to resize the hologram.
+</div>
 
 <div id="startScreen">
 
     <div class="startBox">
 
-        <h1>✨ AI HOLOGRAM CUBE</h1>
+        <h1>⚡ AI WebAR Hologram Cube</h1>
 
         <p>
+            Show the marker to the camera and watch the hologram appear.
+        </p>
 
-            Show the exact printed marker
-            to the camera.
-
-            <br><br>
-
-            A colorful AI hologram cube
-            will appear in the air.
-
-            <br><br>
-
-            🤏 Thumb + Index close
-            → Cube becomes smaller
-
-            <br>
-
-            🤌 Thumb + Index apart
-            → Cube becomes bigger
-
-            <br><br>
-
-            🖐️ Hand controls only cube size.
-
+        <p>
+            🤏 Move thumb + index finger to make the cube smaller or bigger.
         </p>
 
         <button id="startButton">
@@ -548,431 +213,973 @@ body {
 
 </div>
 
-
-<!-- =====================================================
-     STATUS
-===================================================== -->
-
-<div id="statusPanel">
-
-    <div id="status">
-        Waiting...
-    </div>
-
-    <div id="confidence">
-        Marker: 0%
-    </div>
-
-    <div id="handStatus">
-        Hand: Not detected
-    </div>
-
-</div>
-
-
-<!-- =====================================================
-     INSTRUCTIONS
-===================================================== -->
-
-<div id="instructions">
-
-    📷 Show marker
-    &nbsp; • &nbsp;
-
-    🤏 Close = Small
-    &nbsp; • &nbsp;
-
-    🤌 Apart = Big
-
-</div>
-
-
-<!-- =====================================================
-     HIDDEN CANVASES
-===================================================== -->
-
-<canvas id="processingCanvas"></canvas>
-
-<canvas id="handCanvas"></canvas>
-
-
 <script>
-
 /* =========================================================
    ELEMENTS
 ========================================================= */
 
-const video =
-    document.getElementById("camera");
+const video = document.getElementById("camera");
+const threeCanvas = document.getElementById("threeCanvas");
+const processingCanvas = document.getElementById("processingCanvas");
+const handCanvas = document.getElementById("handCanvas");
 
-const threeCanvas =
-    document.getElementById("threeCanvas");
-
-const processingCanvas =
-    document.getElementById("processingCanvas");
-
-const handCanvas =
-    document.getElementById("handCanvas");
-
-const startScreen =
-    document.getElementById("startScreen");
-
-const startButton =
-    document.getElementById("startButton");
-
-const statusText =
-    document.getElementById("status");
-
-const confidenceText =
-    document.getElementById("confidence");
-
-const handStatusText =
-    document.getElementById("handStatus");
-
-const ctx =
-    processingCanvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const startScreen = document.getElementById("startScreen");
+const startButton = document.getElementById("startButton");
 
 
 /* =========================================================
-   GLOBAL VARIABLES
+   GLOBAL STATE
 ========================================================= */
 
-let cameraStarted = false;
-
-let cvReady = false;
-
-let markerLoaded = false;
-
-let markerGray = null;
-
-let markerEdge = null;
-
-let markerWidth = 0;
-
-let markerHeight = 0;
-
-let detecting = false;
-
-let lastDetection = 0;
-
-let lastMarkerSeen = 0;
+let cameraStream = null;
+let arStarted = false;
 
 let markerVisible = false;
+let lastMarkerTime = 0;
 
-let currentMarker = null;
-
-
-/* =========================================================
-   HAND VARIABLES
-========================================================= */
-
-let hands = null;
-
-let handRunning = false;
-
-let lastHandProcess = 0;
+let cvReady = false;
+let markerTemplate = null;
 
 let handDetected = false;
 
-let handScaleTarget = 1;
-
-let handScaleCurrent = 1;
-
-
-/*
- * Hand ONLY changes scale.
- *
- * It never changes cube rotation.
- */
-
-const DEFAULT_HAND_SCALE = 1;
+let handScaleTarget = 0.72;
+let handScaleCurrent = 0.72;
 
 
 /* =========================================================
-   THREE.JS VARIABLES
+   THREE.JS
 ========================================================= */
 
 let scene;
-
 let renderer;
-
-let camera3D;
+let holoCamera;
 
 let cubeGroup;
 
-let hologramCube;
-
-let cubeEdges;
-
+let glassCube;
 let innerCube;
+let edgeGroup;
 
-let cubeGlow;
+let cornerLights = [];
+let rings = [];
+let particles = [];
 
-let cornerPoints;
-
-let energyRing;
-
-let scanRing;
-
-let halo;
-
-let particles;
-
-let animationStarted = false;
+let haloSprite;
+let centerGlow;
 
 
 /* =========================================================
-   CUBE DESIGN SETTINGS
+   CUBE SETTINGS
 ========================================================= */
 
 /*
- * IMPORTANT:
- *
- * This is the actual cube size.
- *
- * X = width
- * Y = height
- * Z = depth
- *
- * ALL THREE ARE EQUAL.
- */
+    IMPORTANT:
 
-const CUBE_SIZE = 1;
+    This is a REAL SQUARE CUBE.
+
+    X = Y = Z
+
+    Do NOT make these values different.
+*/
+
+const CUBE_SIZE = 1.0;
 
 
 /*
- * Fixed 3D viewing angle.
- *
- * The cube DOES NOT rotate.
- *
- * This angle simply lets us see:
- *
- * front + side + top
- *
- * so the cube looks properly 3D.
- */
+    Fixed 3D viewing angle.
 
-const FIXED_ROTATION_X = -0.25;
+    Cube DOES NOT rotate automatically.
+*/
 
-const FIXED_ROTATION_Y = 0.35;
-
+const FIXED_ROTATION_X = -0.30;
+const FIXED_ROTATION_Y = 0.52;
 const FIXED_ROTATION_Z = 0;
 
 
 /* =========================================================
-   WAIT FOR OPENCV
+   INITIALIZE THREE
 ========================================================= */
 
-function waitForOpenCV() {
+function initThree() {
 
-    if (
-        typeof cv !== "undefined" &&
-        cv.Mat &&
-        cv.imread
-    ) {
+    scene = new THREE.Scene();
 
-        cvReady = true;
+    renderer = new THREE.WebGLRenderer({
+        canvas: threeCanvas,
+        alpha: true,
+        antialias: true
+    });
 
-        console.log(
-            "OpenCV.js ready"
+    renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, 2)
+    );
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    holoCamera = new THREE.PerspectiveCamera(
+        42,
+        window.innerWidth / window.innerHeight,
+        0.01,
+        100
+    );
+
+    holoCamera.position.set(0, 0, 7);
+
+    createHologramCube();
+
+    window.addEventListener("resize", onResize);
+
+    animateThree();
+}
+
+
+/* =========================================================
+   CREATE HOLOGRAM CUBE
+========================================================= */
+
+function createHologramCube() {
+
+    cubeGroup = new THREE.Group();
+
+    /*
+        EXACT SAME SIZE IN ALL 3 DIRECTIONS
+    */
+
+    cubeGroup.scale.set(
+        handScaleCurrent,
+        handScaleCurrent,
+        handScaleCurrent
+    );
+
+    /*
+        Fixed 3D perspective.
+
+        NO automatic rotation.
+    */
+
+    cubeGroup.rotation.x = FIXED_ROTATION_X;
+    cubeGroup.rotation.y = FIXED_ROTATION_Y;
+    cubeGroup.rotation.z = FIXED_ROTATION_Z;
+
+    scene.add(cubeGroup);
+
+
+    /* =====================================================
+       GLASS CUBE
+    ===================================================== */
+
+    const cubeGeometry = new THREE.BoxGeometry(
+        CUBE_SIZE,
+        CUBE_SIZE,
+        CUBE_SIZE,
+        6,
+        6,
+        6
+    );
+
+    const glassMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ffcc,
+        transparent: true,
+        opacity: 0.075,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide
+    });
+
+    glassCube = new THREE.Mesh(
+        cubeGeometry,
+        glassMaterial
+    );
+
+    cubeGroup.add(glassCube);
+
+
+    /* =====================================================
+       MAIN NEON EDGES
+    ===================================================== */
+
+    const edgeGeometry = new THREE.EdgesGeometry(
+        new THREE.BoxGeometry(
+            CUBE_SIZE,
+            CUBE_SIZE,
+            CUBE_SIZE
+        )
+    );
+
+    const edgeMaterial = new THREE.LineBasicMaterial({
+        color: 0x00ffb3,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending
+    });
+
+    const edgeLines = new THREE.LineSegments(
+        edgeGeometry,
+        edgeMaterial
+    );
+
+    cubeGroup.add(edgeLines);
+
+
+    /* =====================================================
+       INNER CUBE
+    ===================================================== */
+
+    const innerGeometry = new THREE.BoxGeometry(
+        CUBE_SIZE * 0.76,
+        CUBE_SIZE * 0.76,
+        CUBE_SIZE * 0.76
+    );
+
+    const innerMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ccff,
+        transparent: true,
+        opacity: 0.035,
+        wireframe: true,
+        blending: THREE.AdditiveBlending
+    });
+
+    innerCube = new THREE.Mesh(
+        innerGeometry,
+        innerMaterial
+    );
+
+    cubeGroup.add(innerCube);
+
+
+    /* =====================================================
+       THICK NEON EDGE TUBES
+    ===================================================== */
+
+    createNeonEdges();
+
+
+    /* =====================================================
+       CORNER LIGHTS
+    ===================================================== */
+
+    createCornerLights();
+
+
+    /* =====================================================
+       CENTER GLOW
+    ===================================================== */
+
+    const centerGeometry = new THREE.SphereGeometry(
+        0.105,
+        20,
+        20
+    );
+
+    const centerMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending
+    });
+
+    centerGlow = new THREE.Mesh(
+        centerGeometry,
+        centerMaterial
+    );
+
+    cubeGroup.add(centerGlow);
+
+
+    /* =====================================================
+       ENERGY RINGS
+    ===================================================== */
+
+    createEnergyRings();
+
+
+    /* =====================================================
+       HOLOGRAM HALO
+    ===================================================== */
+
+    createHalo();
+
+
+    /* =====================================================
+       FLOATING PARTICLES
+    ===================================================== */
+
+    createParticles();
+
+
+    /*
+        Start hidden.
+
+        It appears only after marker detection.
+    */
+
+    cubeGroup.visible = false;
+}
+
+
+/* =========================================================
+   CREATE NEON EDGES
+========================================================= */
+
+function createNeonEdges() {
+
+    edgeGroup = new THREE.Group();
+
+    const half = CUBE_SIZE / 2;
+
+    const points = [
+
+        [
+            new THREE.Vector3(-half, -half, -half),
+            new THREE.Vector3( half, -half, -half)
+        ],
+
+        [
+            new THREE.Vector3( half, -half, -half),
+            new THREE.Vector3( half,  half, -half)
+        ],
+
+        [
+            new THREE.Vector3( half,  half, -half),
+            new THREE.Vector3(-half,  half, -half)
+        ],
+
+        [
+            new THREE.Vector3(-half,  half, -half),
+            new THREE.Vector3(-half, -half, -half)
+        ],
+
+        [
+            new THREE.Vector3(-half, -half, half),
+            new THREE.Vector3( half, -half, half)
+        ],
+
+        [
+            new THREE.Vector3( half, -half, half),
+            new THREE.Vector3( half,  half, half)
+        ],
+
+        [
+            new THREE.Vector3( half,  half, half),
+            new THREE.Vector3(-half,  half, half)
+        ],
+
+        [
+            new THREE.Vector3(-half,  half, half),
+            new THREE.Vector3(-half, -half, half)
+        ],
+
+        [
+            new THREE.Vector3(-half, -half, -half),
+            new THREE.Vector3(-half, -half, half)
+        ],
+
+        [
+            new THREE.Vector3( half, -half, -half),
+            new THREE.Vector3( half, -half, half)
+        ],
+
+        [
+            new THREE.Vector3( half,  half, -half),
+            new THREE.Vector3( half,  half, half)
+        ],
+
+        [
+            new THREE.Vector3(-half,  half, -half),
+            new THREE.Vector3(-half,  half, half)
+        ]
+
+    ];
+
+
+    points.forEach((pair, index) => {
+
+        const start = pair[0];
+        const end = pair[1];
+
+        const direction = new THREE.Vector3()
+            .subVectors(end, start);
+
+        const length = direction.length();
+
+        const geometry =
+            new THREE.CylinderGeometry(
+                0.018,
+                0.018,
+                length,
+                8
+            );
+
+        const material =
+            new THREE.MeshBasicMaterial({
+                color:
+                    index % 2 === 0
+                        ? 0x00ffcc
+                        : 0x00ccff,
+
+                transparent: true,
+                opacity: 0.95,
+
+                blending:
+                    THREE.AdditiveBlending
+            });
+
+        const line = new THREE.Mesh(
+            geometry,
+            material
         );
 
-        statusText.textContent =
-            "OpenCV ready";
+        const midpoint = new THREE.Vector3()
+            .addVectors(start, end)
+            .multiplyScalar(0.5);
 
-        loadMarker();
+        line.position.copy(midpoint);
 
-        return;
-    }
+        line.quaternion.setFromUnitVectors(
+            new THREE.Vector3(0, 1, 0),
+            direction.normalize()
+        );
 
-    setTimeout(
-        waitForOpenCV,
-        300
-    );
+        edgeGroup.add(line);
+
+
+        /*
+            Soft glow around each edge
+        */
+
+        const glowGeometry =
+            new THREE.CylinderGeometry(
+                0.035,
+                0.035,
+                length,
+                8
+            );
+
+        const glowMaterial =
+            new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.10,
+                blending: THREE.AdditiveBlending
+            });
+
+        const glow = new THREE.Mesh(
+            glowGeometry,
+            glowMaterial
+        );
+
+        glow.position.copy(midpoint);
+
+        glow.quaternion.copy(
+            line.quaternion
+        );
+
+        edgeGroup.add(glow);
+
+    });
+
+
+    cubeGroup.add(edgeGroup);
 }
 
 
 /* =========================================================
-   LOAD MARKER
+   GLOW TEXTURE
 ========================================================= */
 
-function loadMarker() {
+function createGlowTexture() {
 
-    return new Promise(
-        (resolve, reject) => {
+    const canvas =
+        document.createElement("canvas");
 
-            const img =
-                new Image();
+    canvas.width = 128;
+    canvas.height = 128;
 
+    const ctx = canvas.getContext("2d");
 
-            img.onload =
-                function() {
+    const gradient =
+        ctx.createRadialGradient(
+            64,
+            64,
+            0,
+            64,
+            64,
+            64
+        );
 
-                    try {
+    gradient.addColorStop(
+        0,
+        "rgba(255,255,255,1)"
+    );
 
-                        markerWidth =
-                            img.naturalWidth;
+    gradient.addColorStop(
+        0.15,
+        "rgba(0,255,255,0.95)"
+    );
 
-                        markerHeight =
-                            img.naturalHeight;
+    gradient.addColorStop(
+        0.40,
+        "rgba(0,255,180,0.35)"
+    );
 
+    gradient.addColorStop(
+        1,
+        "rgba(0,255,180,0)"
+    );
 
-                        processingCanvas.width =
-                            markerWidth;
+    ctx.fillStyle = gradient;
 
-                        processingCanvas.height =
-                            markerHeight;
+    ctx.fillRect(
+        0,
+        0,
+        128,
+        128
+    );
 
-
-                        ctx.clearRect(
-                            0,
-                            0,
-                            markerWidth,
-                            markerHeight
-                        );
-
-
-                        ctx.drawImage(
-                            img,
-                            0,
-                            0,
-                            markerWidth,
-                            markerHeight
-                        );
-
-
-                        const imageData =
-                            ctx.getImageData(
-                                0,
-                                0,
-                                markerWidth,
-                                markerHeight
-                            );
-
-
-                        const rgba =
-                            cv.matFromImageData(
-                                imageData
-                            );
+    return new THREE.CanvasTexture(canvas);
+}
 
 
-                        markerGray =
-                            new cv.Mat();
+/* =========================================================
+   CORNER LIGHTS
+========================================================= */
+
+function createCornerLights() {
+
+    const texture =
+        createGlowTexture();
+
+    const half = CUBE_SIZE / 2;
+
+    const positions = [
+
+        [-half, -half, -half],
+        [ half, -half, -half],
+        [ half,  half, -half],
+        [-half,  half, -half],
+
+        [-half, -half,  half],
+        [ half, -half,  half],
+        [ half,  half,  half],
+        [-half,  half,  half]
+
+    ];
 
 
-                        cv.cvtColor(
-                            rgba,
-                            markerGray,
-                            cv.COLOR_RGBA2GRAY
-                        );
+    positions.forEach((position, index) => {
+
+        const material =
+            new THREE.SpriteMaterial({
+                map: texture,
+                color:
+                    index % 2 === 0
+                        ? 0x00ffff
+                        : 0x00ff99,
+
+                transparent: true,
+                opacity: 0.95,
+
+                blending:
+                    THREE.AdditiveBlending,
+
+                depthWrite: false
+            });
+
+        const sprite =
+            new THREE.Sprite(material);
+
+        sprite.position.set(
+            position[0],
+            position[1],
+            position[2]
+        );
+
+        sprite.scale.set(
+            0.23,
+            0.23,
+            0.23
+        );
+
+        cubeGroup.add(sprite);
+
+        cornerLights.push(sprite);
+    });
+}
 
 
-                        markerEdge =
-                            new cv.Mat();
+/* =========================================================
+   ENERGY RINGS
+========================================================= */
+
+function createEnergyRings() {
+
+    for (let i = 0; i < 2; i++) {
+
+        const geometry =
+            new THREE.TorusGeometry(
+                0.72 + i * 0.10,
+                0.012,
+                8,
+                80
+            );
+
+        const material =
+            new THREE.MeshBasicMaterial({
+                color:
+                    i === 0
+                        ? 0x00ffff
+                        : 0x00ff88,
+
+                transparent: true,
+                opacity:
+                    i === 0
+                        ? 0.55
+                        : 0.30,
+
+                blending:
+                    THREE.AdditiveBlending
+            });
+
+        const ring =
+            new THREE.Mesh(
+                geometry,
+                material
+            );
+
+        ring.rotation.x =
+            Math.PI / 2;
+
+        cubeGroup.add(ring);
+
+        rings.push(ring);
+    }
+}
 
 
-                        cv.Canny(
-                            markerGray,
-                            markerEdge,
-                            60,
-                            150
-                        );
+/* =========================================================
+   HALO
+========================================================= */
+
+function createHalo() {
+
+    const texture =
+        createGlowTexture();
+
+    const material =
+        new THREE.SpriteMaterial({
+            map: texture,
+            color: 0x00ffcc,
+            transparent: true,
+            opacity: 0.18,
+
+            blending:
+                THREE.AdditiveBlending,
+
+            depthWrite: false
+        });
+
+    haloSprite =
+        new THREE.Sprite(material);
+
+    haloSprite.scale.set(
+        2.9,
+        2.9,
+        2.9
+    );
+
+    haloSprite.position.set(
+        0,
+        0,
+        -0.15
+    );
+
+    cubeGroup.add(haloSprite);
+}
 
 
-                        rgba.delete();
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+function createParticles() {
+
+    const count = 80;
+
+    const geometry =
+        new THREE.BufferGeometry();
+
+    const positions =
+        new Float32Array(count * 3);
+
+    const colors =
+        new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+
+        const radius =
+            0.85 + Math.random() * 0.75;
+
+        const angle =
+            Math.random() * Math.PI * 2;
+
+        const height =
+            (Math.random() - 0.5) * 1.8;
+
+        positions[i * 3] =
+            Math.cos(angle) * radius;
+
+        positions[i * 3 + 1] =
+            height;
+
+        positions[i * 3 + 2] =
+            Math.sin(angle) * radius;
 
 
-                        markerLoaded =
-                            true;
+        if (Math.random() > 0.5) {
 
+            colors[i * 3] = 0;
+            colors[i * 3 + 1] = 1;
+            colors[i * 3 + 2] = 0.8;
 
-                        statusText.textContent =
-                            "Marker ready • Start AR";
+        } else {
 
-
-                        console.log(
-                            "Marker loaded:",
-                            markerWidth,
-                            markerHeight
-                        );
-
-
-                        resolve();
-
-                    }
-                    catch(error) {
-
-                        console.error(
-                            "Marker error:",
-                            error
-                        );
-
-                        reject(error);
-                    }
-                };
-
-
-            img.onerror =
-                function() {
-
-                    statusText.textContent =
-                        "ERROR: marker.png missing";
-
-                    reject(
-                        new Error(
-                            "assets/marker.png missing"
-                        )
-                    );
-                };
-
-
-            img.src =
-                "assets/marker.png?v=" +
-                Date.now();
+            colors[i * 3] = 0;
+            colors[i * 3 + 1] = 0.8;
+            colors[i * 3 + 2] = 1;
 
         }
+    }
+
+    geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(
+            positions,
+            3
+        )
+    );
+
+    geometry.setAttribute(
+        "color",
+        new THREE.BufferAttribute(
+            colors,
+            3
+        )
+    );
+
+
+    const material =
+        new THREE.PointsMaterial({
+            size: 0.035,
+
+            vertexColors: true,
+
+            transparent: true,
+            opacity: 0.85,
+
+            blending:
+                THREE.AdditiveBlending,
+
+            depthWrite: false
+        });
+
+
+    const pointCloud =
+        new THREE.Points(
+            geometry,
+            material
+        );
+
+    cubeGroup.add(pointCloud);
+
+    particles.push(pointCloud);
+}
+
+
+/* =========================================================
+   THREE ANIMATION
+========================================================= */
+
+function animateThree() {
+
+    requestAnimationFrame(
+        animateThree
+    );
+
+
+    /*
+        IMPORTANT:
+
+        Cube NEVER rotates.
+
+        Fixed angle is always maintained.
+    */
+
+    if (cubeGroup) {
+
+        cubeGroup.rotation.x =
+            FIXED_ROTATION_X;
+
+        cubeGroup.rotation.y =
+            FIXED_ROTATION_Y;
+
+        cubeGroup.rotation.z =
+            FIXED_ROTATION_Z;
+
+
+        /*
+            Smooth hand-controlled scaling.
+
+            X/Y/Z are ALWAYS equal.
+        */
+
+        handScaleCurrent +=
+            (handScaleTarget - handScaleCurrent)
+            * 0.10;
+
+        cubeGroup.scale.set(
+            handScaleCurrent,
+            handScaleCurrent,
+            handScaleCurrent
+        );
+    }
+
+
+    /*
+        Only glow/rings/particles animate.
+        Cube itself does NOT rotate.
+    */
+
+    const t =
+        performance.now() * 0.001;
+
+
+    if (centerGlow) {
+
+        const pulse =
+            1 +
+            Math.sin(t * 3) * 0.16;
+
+        centerGlow.scale.set(
+            pulse,
+            pulse,
+            pulse
+        );
+
+        centerGlow.material.opacity =
+            0.72 +
+            Math.sin(t * 3) * 0.20;
+    }
+
+
+    cornerLights.forEach(
+        (light, index) => {
+
+            const pulse =
+                0.20 +
+                Math.sin(
+                    t * 3 +
+                    index * 0.7
+                ) * 0.07;
+
+            light.material.opacity =
+                0.72 + pulse;
+        }
+    );
+
+
+    rings.forEach(
+        (ring, index) => {
+
+            ring.rotation.z =
+                Math.sin(
+                    t * 0.7 +
+                    index
+                ) * 0.25;
+
+            ring.scale.setScalar(
+                1 +
+                Math.sin(
+                    t * 2 +
+                    index
+                ) * 0.05
+            );
+        }
+    );
+
+
+    particles.forEach(
+        (particle, index) => {
+
+            particle.rotation.y =
+                t * 0.12;
+
+            particle.rotation.x =
+                Math.sin(t * 0.25) * 0.08;
+        }
+    );
+
+
+    renderer.render(
+        scene,
+        holoCamera
     );
 }
 
 
 /* =========================================================
-   START CAMERA
+   RESIZE
+========================================================= */
+
+function onResize() {
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+    holoCamera.aspect =
+        window.innerWidth /
+        window.innerHeight;
+
+    holoCamera.updateProjectionMatrix();
+}
+
+
+/* =========================================================
+   CAMERA
 ========================================================= */
 
 async function startCamera() {
 
-    if (cameraStarted)
-        return;
-
+    statusEl.textContent =
+        "Starting camera...";
 
     try {
 
-        statusText.textContent =
-            "Starting camera...";
-
-
-        let stream;
-
-
         /*
-         * FIRST:
-         *
-         * Try rear camera.
-         *
-         * This is useful for phone.
-         */
+            Try rear camera first.
+
+            On phone:
+            back/rear camera.
+
+            On laptop:
+            fallback to normal webcam.
+        */
 
         try {
 
-            stream =
-                await navigator.mediaDevices
-                .getUserMedia({
+            cameraStream =
+                await navigator.mediaDevices.getUserMedia({
 
                     video: {
-
                         facingMode: {
-                            ideal:
-                                "environment"
+                            ideal: "environment"
                         },
 
                         width: {
@@ -987,24 +1194,12 @@ async function startCamera() {
                     audio: false
                 });
 
-        }
-        catch(error) {
+        } catch (firstError) {
 
-            console.warn(
-                "Rear camera unavailable. Using fallback."
-            );
-
-
-            /*
-             * Laptop / fallback camera.
-             */
-
-            stream =
-                await navigator.mediaDevices
-                .getUserMedia({
+            cameraStream =
+                await navigator.mediaDevices.getUserMedia({
 
                     video: {
-
                         width: {
                             ideal: 1280
                         },
@@ -1020,85 +1215,151 @@ async function startCamera() {
 
 
         video.srcObject =
-            stream;
-
+            cameraStream;
 
         await video.play();
 
+        arStarted = true;
 
-        cameraStarted =
-            true;
+        startScreen.style.display =
+            "none";
 
+        statusEl.textContent =
+            "Camera ready — show marker";
 
-        statusText.textContent =
-            "Camera active • Searching marker";
-
+        startMarkerDetection();
 
         startHandTracking();
 
+    } catch (error) {
 
-        requestAnimationFrame(
-            detectionLoop
-        );
+        console.error(error);
 
-    }
-    catch(error) {
-
-        console.error(
-            "Camera error:",
-            error
-        );
-
-
-        statusText.textContent =
+        statusEl.textContent =
             "Camera permission required";
-
-
-        alert(
-            "Camera permission allow karo aur page ko HTTPS ya localhost par run karo."
-        );
     }
 }
 
 
 /* =========================================================
-   MARKER DETECTION LOOP
+   MARKER IMAGE
 ========================================================= */
 
-function detectionLoop(time) {
+const MARKER_PATH =
+    "assets/marker.png";
 
-    requestAnimationFrame(
-        detectionLoop
+
+function loadMarker() {
+
+    const image =
+        new Image();
+
+    image.onload = function() {
+
+        const canvas =
+            document.createElement("canvas");
+
+        canvas.width =
+            image.width;
+
+        canvas.height =
+            image.height;
+
+        const ctx =
+            canvas.getContext("2d");
+
+        ctx.drawImage(
+            image,
+            0,
+            0
+        );
+
+        try {
+
+            markerTemplate =
+                cv.imread(canvas);
+
+            const gray =
+                new cv.Mat();
+
+            cv.cvtColor(
+                markerTemplate,
+                gray,
+                cv.COLOR_RGBA2GRAY
+            );
+
+            markerTemplate.delete();
+
+            markerTemplate =
+                gray;
+
+            /*
+                Slightly improve detection at
+                different distances.
+            */
+
+            const blurred =
+                new cv.Mat();
+
+            cv.GaussianBlur(
+                markerTemplate,
+                blurred,
+                new cv.Size(3, 3),
+                0
+            );
+
+            markerTemplate.delete();
+
+            markerTemplate =
+                blurred;
+
+            cvReady = true;
+
+            console.log(
+                "Marker loaded:",
+                image.width,
+                image.height
+            );
+
+        } catch (error) {
+
+            console.error(
+                "OpenCV marker error:",
+                error
+            );
+        }
+    };
+
+    image.onerror = function() {
+
+        console.error(
+            "Could not load:",
+            MARKER_PATH
+        );
+
+        statusEl.textContent =
+            "Marker image not found";
+    };
+
+    image.src =
+        MARKER_PATH;
+}
+
+
+/* =========================================================
+   OPENCV HELPERS
+========================================================= */
+
+function clamp(
+    value,
+    min,
+    max
+) {
+
+    return Math.max(
+        min,
+        Math.min(max, value)
     );
-
-
-    if (!cameraStarted)
-        return;
-
-
-    if (!markerLoaded)
-        return;
-
-
-    if (detecting)
-        return;
-
-
-    if (
-        time -
-        lastDetection <
-        120
-    ) {
-
-        return;
-    }
-
-
-    lastDetection =
-        time;
-
-
-    detectMarker();
 }
 
 
@@ -1109,1136 +1370,410 @@ function detectionLoop(time) {
 function detectMarker() {
 
     if (
-        !video.videoWidth ||
-        !video.videoHeight
+        !arStarted ||
+        !cvReady ||
+        !markerTemplate ||
+        video.readyState < 2
     ) {
+        return;
+    }
+
+
+    const width = 640;
+
+    const aspect =
+        video.videoHeight /
+        video.videoWidth;
+
+    const height =
+        Math.round(
+            width * aspect
+        );
+
+
+    processingCanvas.width =
+        width;
+
+    processingCanvas.height =
+        height;
+
+
+    const ctx =
+        processingCanvas.getContext(
+            "2d",
+            {
+                willReadFrequently: true
+            }
+        );
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    let frame;
+
+    try {
+
+        frame =
+            cv.imread(
+                processingCanvas
+            );
+
+    } catch (error) {
 
         return;
     }
 
 
-    detecting = true;
+    const gray =
+        new cv.Mat();
+
+    cv.cvtColor(
+        frame,
+        gray,
+        cv.COLOR_RGBA2GRAY
+    );
 
 
-    try {
+    const blurred =
+        new cv.Mat();
 
-        const frameWidth =
-            640;
+    cv.GaussianBlur(
+        gray,
+        blurred,
+        new cv.Size(3, 3),
+        0
+    );
 
 
-        const frameHeight =
+    const templateW =
+        markerTemplate.cols;
+
+    const templateH =
+        markerTemplate.rows;
+
+
+    /*
+        MULTI-SCALE DETECTION
+
+        This is the important part for
+        detecting the marker from farther away.
+
+        Smaller scales allow the physical
+        marker to occupy fewer pixels.
+    */
+
+    const scales = [
+        0.22,
+        0.26,
+        0.30,
+        0.34,
+        0.40,
+        0.46,
+        0.52,
+        0.60,
+        0.70,
+        0.82,
+        0.95
+    ];
+
+
+    let bestScore = -1;
+    let bestX = 0;
+    let bestY = 0;
+    let bestW = 0;
+    let bestH = 0;
+
+
+    for (
+        let sIndex = 0;
+        sIndex < scales.length;
+        sIndex++
+    ) {
+
+        const scale =
+            scales[sIndex];
+
+
+        const w =
             Math.round(
-                640 *
-                video.videoHeight /
-                video.videoWidth
+                templateW * scale
+            );
+
+        const h =
+            Math.round(
+                templateH * scale
             );
 
 
-        processingCanvas.width =
-            frameWidth;
-
-        processingCanvas.height =
-            frameHeight;
-
-
-        ctx.drawImage(
-            video,
-            0,
-            0,
-            frameWidth,
-            frameHeight
-        );
+        if (
+            w < 25 ||
+            h < 25 ||
+            w >= gray.cols ||
+            h >= gray.rows
+        ) {
+            continue;
+        }
 
 
-        const imageData =
-            ctx.getImageData(
-                0,
-                0,
-                frameWidth,
-                frameHeight
-            );
-
-
-        const src =
-            cv.matFromImageData(
-                imageData
-            );
-
-
-        const gray =
+        const resized =
             new cv.Mat();
 
-
-        const edge =
-            new cv.Mat();
-
-
-        cv.cvtColor(
-            src,
-            gray,
-            cv.COLOR_RGBA2GRAY
+        cv.resize(
+            markerTemplate,
+            resized,
+            new cv.Size(w, h),
+            0,
+            0,
+            cv.INTER_AREA
         );
 
 
-        cv.Canny(
-            gray,
-            edge,
-            60,
-            150
-        );
+        const resultW =
+            gray.cols - w + 1;
+
+        const resultH =
+            gray.rows - h + 1;
 
 
-        let bestScore = -1;
-
-        let bestX = 0;
-
-        let bestY = 0;
-
-        let bestW = 0;
-
-        let bestH = 0;
-
-
-        /*
-         * Multiple marker sizes.
-         */
-
-        const scales = [
-
-            0.18,
-            0.22,
-            0.26,
-            0.30,
-            0.34,
-            0.38,
-            0.42,
-            0.46,
-            0.50,
-            0.56,
-            0.62,
-            0.68
-
-        ];
-
-
-        for (
-            let i = 0;
-            i < scales.length;
-            i++
+        if (
+            resultW <= 0 ||
+            resultH <= 0
         ) {
 
-            const scale =
-                scales[i];
+            resized.delete();
+            continue;
+        }
 
 
-            const w =
-                Math.round(
-                    markerWidth *
-                    scale
-                );
-
-
-            const h =
-                Math.round(
-                    markerHeight *
-                    scale
-                );
-
-
-            if (
-                w < 40 ||
-                h < 40 ||
-                w >= frameWidth ||
-                h >= frameHeight
-            ) {
-
-                continue;
-            }
-
-
-            const resizedMarker =
-                new cv.Mat();
-
-
-            const resizedMarkerEdge =
-                new cv.Mat();
-
-
-            cv.resize(
-                markerGray,
-                resizedMarker,
-                new cv.Size(
-                    w,
-                    h
-                ),
-                0,
-                0,
-                cv.INTER_AREA
+        const result =
+            new cv.Mat(
+                resultH,
+                resultW,
+                cv.CV_32FC1
             );
 
 
-            cv.resize(
-                markerEdge,
-                resizedMarkerEdge,
-                new cv.Size(
-                    w,
-                    h
-                ),
-                0,
-                0,
-                cv.INTER_AREA
-            );
-
-
-            const resultGray =
-                new cv.Mat();
-
-
-            const resultEdge =
-                new cv.Mat();
-
+        try {
 
             cv.matchTemplate(
                 gray,
-                resizedMarker,
-                resultGray,
+                resized,
+                result,
                 cv.TM_CCOEFF_NORMED
             );
 
 
-            cv.matchTemplate(
-                edge,
-                resizedMarkerEdge,
-                resultEdge,
-                cv.TM_CCOEFF_NORMED
-            );
-
-
-            const minMaxGray =
-                cv.minMaxLoc(
-                    resultGray
-                );
-
-
-            const minMaxEdge =
-                cv.minMaxLoc(
-                    resultEdge
-                );
-
-
-            const combinedScore =
-                minMaxGray.maxVal *
-                0.65 +
-
-                minMaxEdge.maxVal *
-                0.35;
+            const minMax =
+                cv.minMaxLoc(result);
 
 
             if (
-                combinedScore >
+                minMax.maxVal >
                 bestScore
             ) {
 
                 bestScore =
-                    combinedScore;
-
+                    minMax.maxVal;
 
                 bestX =
-                    minMaxGray.maxLoc.x;
-
+                    minMax.maxLoc.x;
 
                 bestY =
-                    minMaxGray.maxLoc.y;
+                    minMax.maxLoc.y;
 
-
-                bestW =
-                    w;
-
-
-                bestH =
-                    h;
+                bestW = w;
+                bestH = h;
             }
 
+        } catch (error) {
 
-            resizedMarker.delete();
-
-            resizedMarkerEdge.delete();
-
-            resultGray.delete();
-
-            resultEdge.delete();
-        }
-
-
-        const found =
-            bestScore >= 0.55;
-
-
-        if (found) {
-
-            markerVisible =
-                true;
-
-
-            lastMarkerSeen =
-                performance.now();
-
-
-            currentMarker = {
-
-                x:
-                    bestX,
-
-                y:
-                    bestY,
-
-                width:
-                    bestW,
-
-                height:
-                    bestH,
-
-                score:
-                    bestScore
-            };
-
-
-            confidenceText.textContent =
-                "Marker: " +
-                Math.round(
-                    bestScore * 100
-                ) +
-                "%";
-
-
-            statusText.textContent =
-                "✓ Marker detected";
-
-
-            updateARFromMarker(
-                currentMarker
+            console.warn(
+                "Template match error",
+                error
             );
-
-        }
-        else {
-
-            if (
-                performance.now() -
-                lastMarkerSeen >
-                220
-            ) {
-
-                markerVisible =
-                    false;
-
-
-                currentMarker =
-                    null;
-
-
-                hideAR();
-
-
-                statusText.textContent =
-                    "Searching for marker";
-
-
-                confidenceText.textContent =
-                    "Marker: 0%";
-            }
         }
 
 
-        src.delete();
-
-        gray.delete();
-
-        edge.delete();
-
+        resized.delete();
+        result.delete();
     }
-    catch(error) {
-
-        console.error(
-            "Detection error:",
-            error
-        );
-
-    }
-    finally {
-
-        detecting =
-            false;
-    }
-}
 
 
-/* =========================================================
-   THREE.JS INITIALIZATION
-========================================================= */
-
-function initThree() {
-
-    scene =
-        new THREE.Scene();
+    frame.delete();
+    gray.delete();
+    blurred.delete();
 
 
     /*
-     * Orthographic camera.
-     *
-     * This keeps cube proportions stable.
-     */
+        More tolerant threshold.
 
-    camera3D =
-        new THREE.OrthographicCamera(
-            -1,
-            1,
-            1,
-            -1,
-            0.1,
-            100
-        );
+        This allows detection when marker
+        is farther from camera.
+    */
 
+    const DETECTION_THRESHOLD = 0.48;
 
-    camera3D.position.z =
-        10;
 
-
-    renderer =
-        new THREE.WebGLRenderer({
-
-            canvas:
-                threeCanvas,
-
-            alpha:
-                true,
-
-            antialias:
-                true,
-
-            powerPreference:
-                "high-performance"
-
-        });
-
-
-    renderer.setPixelRatio(
-        Math.min(
-            window.devicePixelRatio || 1,
-            2
-        )
-    );
-
-
-    renderer.setSize(
-        window.innerWidth,
-        window.innerHeight,
-        false
-    );
-
-
-    cubeGroup =
-        new THREE.Group();
-
-
-    cubeGroup.visible =
-        false;
-
-
-    scene.add(
-        cubeGroup
-    );
-
-
-    createHologramCube();
-
-
-    window.addEventListener(
-        "resize",
-        resizeThree
-    );
-
-
-    animationStarted =
-        true;
-
-
-    animateThree();
-}
-
-
-/* =========================================================
-   CREATE HOLOGRAM CUBE
-========================================================= */
-
-function createHologramCube() {
-
-    /*
-     * =====================================================
-     * IMPORTANT:
-     *
-     * PROPER THICK CUBE
-     *
-     * WIDTH  = 1.8
-     * HEIGHT = 1.8
-     * DEPTH  = 1.8
-     *
-     * ALL THREE ARE EXACTLY SAME.
-     * =====================================================
-     */
-
-    const geometry =
-        new THREE.BoxGeometry(
-            CUBE_SIZE,
-            CUBE_SIZE,
-            CUBE_SIZE
-        );
-
-
-    /*
-     * =====================================================
-     * TRANSPARENT GLASS BODY
-     * =====================================================
-     */
-
-    const material =
-        new THREE.MeshBasicMaterial({
-
-            color:
-                0x00ffff,
-
-            transparent:
-                true,
-
-            opacity:
-                0.13,
-
-            side:
-                THREE.DoubleSide,
-
-            depthWrite:
-                false,
-
-            blending:
-                THREE.AdditiveBlending
-
-        });
-
-
-    hologramCube =
-        new THREE.Mesh(
-            geometry,
-            material
-        );
-
-
-    cubeGroup.add(
-        hologramCube
-    );
-
-
-    /*
-     * =====================================================
-     * NEON EDGES
-     * =====================================================
-     */
-
-    const edgeGeometry =
-        new THREE.EdgesGeometry(
-            geometry
-        );
-
-
-    const edgeMaterial =
-        new THREE.LineBasicMaterial({
-
-            color:
-                0x00ffff,
-
-            transparent:
-                true,
-
-            opacity:
-                1
-
-        });
-
-
-    cubeEdges =
-        new THREE.LineSegments(
-            edgeGeometry,
-            edgeMaterial
-        );
-
-
-    cubeGroup.add(
-        cubeEdges
-    );
-
-
-    /*
-     * =====================================================
-     * INNER CUBE
-     * =====================================================
-     */
-
-    const innerSize =
-        CUBE_SIZE * 0.46;
-
-
-    const innerGeometry =
-        new THREE.BoxGeometry(
-            innerSize,
-            innerSize,
-            innerSize
-        );
-
-
-    const innerEdges =
-        new THREE.EdgesGeometry(
-            innerGeometry
-        );
-
-
-    const innerMaterial =
-        new THREE.LineBasicMaterial({
-
-            color:
-                0xff38d1,
-
-            transparent:
-                true,
-
-            opacity:
-                0.9
-
-        });
-
-
-    innerCube =
-        new THREE.LineSegments(
-            innerEdges,
-            innerMaterial
-        );
-
-
-    cubeGroup.add(
-        innerCube
-    );
-
-
-    /*
-     * =====================================================
-     * 8 CORNER POINTS
-     *
-     * IMPORTANT:
-     *
-     * They now use the SAME CUBE_SIZE.
-     *
-     * This prevents corner mismatch.
-     * =====================================================
-     */
-
-    const pointGeometry =
-        new THREE.BufferGeometry();
-
-
-    const half =
-        CUBE_SIZE / 2;
-
-
-    const points = [
-
-        -half, -half, -half,
-         half, -half, -half,
-
-        -half,  half, -half,
-         half,  half, -half,
-
-        -half, -half,  half,
-         half, -half,  half,
-
-        -half,  half,  half,
-         half,  half,  half
-
-    ];
-
-
-    pointGeometry.setAttribute(
-        "position",
-
-        new THREE.Float32BufferAttribute(
-            points,
-            3
-        )
-    );
-
-
-    const pointMaterial =
-        new THREE.PointsMaterial({
-
-            color:
-                0xffffff,
-
-            size:
-                0.12,
-
-            transparent:
-                true,
-
-            opacity:
-                1,
-
-            blending:
-                THREE.AdditiveBlending,
-
-            depthWrite:
-                false
-
-        });
-
-
-    cornerPoints =
-        new THREE.Points(
-            pointGeometry,
-            pointMaterial
-        );
-
-
-    cubeGroup.add(
-        cornerPoints
-    );
-
-
-    /*
-     * =====================================================
-     * CENTER GLOW
-     * =====================================================
-     */
-
-    const glowGeometry =
-        new THREE.SphereGeometry(
-            0.075,
-            20,
-            20
-        );
-
-
-    const glowMaterial =
-        new THREE.MeshBasicMaterial({
-
-            color:
-                0xff38d1,
-
-            transparent:
-                true,
-
-            opacity:
-                0.95,
-
-            blending:
-                THREE.AdditiveBlending,
-
-            depthWrite:
-                false
-
-        });
-
-
-    cubeGlow =
-        new THREE.Mesh(
-            glowGeometry,
-            glowMaterial
-        );
-
-
-    cubeGroup.add(
-        cubeGlow
-    );
-
-
-    /*
-     * =====================================================
-     * ENERGY RING
-     * =====================================================
-     */
-
-    const ringGeometry =
-        new THREE.RingGeometry(
-            CUBE_SIZE * 0.39,
-            CUBE_SIZE * 0.405,
-            64
-        );
-
-
-    const ringMaterial =
-        new THREE.MeshBasicMaterial({
-
-            color:
-                0x00ffff,
-
-            transparent:
-                true,
-
-            opacity:
-                0.75,
-
-            side:
-                THREE.DoubleSide,
-
-            blending:
-                THREE.AdditiveBlending,
-
-            depthWrite:
-                false
-
-        });
-
-
-    energyRing =
-        new THREE.Mesh(
-            ringGeometry,
-            ringMaterial
-        );
-
-
-    energyRing.rotation.x =
-        Math.PI / 2;
-
-
-    energyRing.position.y =
-        -(CUBE_SIZE / 2 + 0.08);
-
-
-    cubeGroup.add(
-        energyRing
-    );
-
-
-    /*
-     * =====================================================
-     * SECOND SCAN RING
-     * =====================================================
-     */
-
-    const scanGeometry =
-        new THREE.RingGeometry(
-            CUBE_SIZE * 0.46,
-            CUBE_SIZE * 0.475,
-            64
-        );
-
-
-    const scanMaterial =
-        new THREE.MeshBasicMaterial({
-
-            color:
-                0xff38d1,
-
-            transparent:
-                true,
-
-            opacity:
-                0.55,
-
-            side:
-                THREE.DoubleSide,
-
-            blending:
-                THREE.AdditiveBlending,
-
-            depthWrite:
-                false
-
-        });
-
-
-    scanRing =
-        new THREE.Mesh(
-            scanGeometry,
-            scanMaterial
-        );
-
-
-    scanRing.rotation.x =
-        Math.PI / 2;
-
-
-    scanRing.position.y =
-        CUBE_SIZE / 2 + 0.08;
-
-
-    cubeGroup.add(
-        scanRing
-    );
-
-
-    /*
-     * =====================================================
-     * SOFT HALO
-     * =====================================================
-     */
-
-    const glowCanvas =
-        document.createElement("canvas");
-
-
-    glowCanvas.width =
-        128;
-
-    glowCanvas.height =
-        128;
-
-
-    const glowContext =
-        glowCanvas.getContext("2d");
-
-
-    const gradient =
-        glowContext.createRadialGradient(
-            64,
-            64,
-            0,
-            64,
-            64,
-            64
-        );
-
-
-    gradient.addColorStop(
-        0,
-        "rgba(255,255,255,0.95)"
-    );
-
-
-    gradient.addColorStop(
-        0.25,
-        "rgba(0,255,255,0.45)"
-    );
-
-
-    gradient.addColorStop(
-        0.55,
-        "rgba(160,0,255,0.20)"
-    );
-
-
-    gradient.addColorStop(
-        1,
-        "rgba(0,0,0,0)"
-    );
-
-
-    glowContext.fillStyle =
-        gradient;
-
-
-    glowContext.fillRect(
-        0,
-        0,
-        128,
-        128
-    );
-
-
-    const glowTexture =
-        new THREE.CanvasTexture(
-            glowCanvas
-        );
-
-
-    const haloMaterial =
-        new THREE.SpriteMaterial({
-
-            map:
-                glowTexture,
-
-            transparent:
-                true,
-
-            opacity:
-                0.20,
-
-            blending:
-                THREE.AdditiveBlending,
-
-            depthWrite:
-                false
-
-        });
-
-
-    halo =
-        new THREE.Sprite(
-            haloMaterial
-        );
-
-
-    halo.scale.setScalar(
-        CUBE_SIZE * 2.4
-    );
-
-
-    halo.position.z =
-        -0.05;
-
-
-    cubeGroup.add(
-        halo
-    );
-
-
-    /*
-     * =====================================================
-     * ORBITING PARTICLES
-     * =====================================================
-     */
-
-    const particleCount =
-        80;
-
-
-    const particlePositions =
-        new Float32Array(
-            particleCount * 3
-        );
-
-
-    const particleColors =
-        new Float32Array(
-            particleCount * 3
-        );
-
-
-    const particleData = [];
-
-
-    for (
-        let i = 0;
-        i < particleCount;
-        i++
+    if (
+        bestScore >=
+        DETECTION_THRESHOLD
     ) {
 
-        particleData.push({
+        markerVisible = true;
+        lastMarkerTime =
+            performance.now();
 
-            radius:
-                CUBE_SIZE *
-                (
-                    0.55 +
-                    Math.random() * 0.75
-                ),
 
-            angle:
-                Math.random() *
-                Math.PI *
-                2,
+        updateCubeFromMarker(
+            bestX,
+            bestY,
+            bestW,
+            bestH,
+            width,
+            height
+        );
 
-            speed:
-                (
-                    0.15 +
-                    Math.random() * 0.30
-                ) *
-                (
-                    Math.random() < 0.5
-                        ? -1
-                        : 1
-                ),
+        statusEl.textContent =
+            "✓ Marker detected — AI Cube active";
 
-            y:
-                (
-                    Math.random() -
-                    0.5
-                ) *
-                CUBE_SIZE *
-                1.5,
+    } else {
 
-            phase:
-                Math.random() *
-                Math.PI *
-                2
+        /*
+            Small grace period.
 
-        });
+            Prevents flickering when marker
+            temporarily becomes weak.
+        */
 
+        if (
+            performance.now() -
+            lastMarkerTime >
+            350
+        ) {
+
+            markerVisible = false;
+
+            cubeGroup.visible =
+                false;
+
+            statusEl.textContent =
+                "Searching for marker...";
+        }
+    }
+}
+
+
+/* =========================================================
+   POSITION CUBE ABOVE MARKER
+========================================================= */
+
+function updateCubeFromMarker(
+    x,
+    y,
+    w,
+    h,
+    frameWidth,
+    frameHeight
+) {
+
+    if (!cubeGroup) {
+        return;
     }
 
 
-    const particleGeometry =
-        new THREE.BufferGeometry();
+    /*
+        Marker center.
+    */
+
+    const centerX =
+        x + w / 2;
+
+    const centerY =
+        y + h / 2;
 
 
-    particleGeometry.setAttribute(
-        "position",
+    /*
+        Convert camera coordinates
+        to normalized screen coordinates.
+    */
 
-        new THREE.BufferAttribute(
-            particlePositions,
-            3
-        )
-    );
+    const screenX =
+        centerX / frameWidth;
 
-
-    particleGeometry.setAttribute(
-        "color",
-
-        new THREE.BufferAttribute(
-            particleColors,
-            3
-        )
-    );
+    const screenY =
+        centerY / frameHeight;
 
 
-    const particleMaterial =
-        new THREE.PointsMaterial({
+    /*
+        Put cube ABOVE the marker.
 
-            size:
-                0.035,
+        Marker height affects vertical offset.
+    */
 
-            vertexColors:
-                true,
-
-            transparent:
-                true,
-
-            opacity:
-                0.75,
-
-            map:
-                glowTexture,
-
-            blending:
-                THREE.AdditiveBlending,
-
-            depthWrite:
-                false
-
-        });
+    const markerHeightNormalized =
+        h / frameHeight;
 
 
-    particles =
-        new THREE.Points(
-            particleGeometry,
-            particleMaterial
+    const cubeX =
+        (screenX - 0.5) * 2;
+
+
+    const cubeY =
+        (0.5 - screenY) * 2
+        +
+        markerHeightNormalized * 0.60;
+
+
+    /*
+        Marker distance controls a reasonable
+        base position scale.
+
+        It does NOT stretch the cube.
+
+        X/Y/Z remain equal.
+    */
+
+    const markerScale =
+        clamp(
+            markerHeightNormalized /
+            0.32,
+            0.55,
+            1.10
         );
 
 
-    particles.userData.data =
-        particleData;
-
-
-    cubeGroup.add(
-        particles
+    cubeGroup.position.set(
+        cubeX * 2.7,
+        cubeY * 2.1,
+        0
     );
 
 
     /*
-     * =====================================================
-     * VERY IMPORTANT
-     *
-     * FIXED 3D ANGLE
-     *
-     * This is NOT animation.
-     *
-     * Cube stays in this exact position.
-     * =====================================================
-     */
+        Base size from marker.
+
+        Hand will smoothly override this
+        when a hand is detected.
+    */
+
+    if (!handDetected) {
+
+        handScaleTarget =
+            markerScale * 0.72;
+    }
+
+
+    /*
+        Keep exact fixed rotation.
+
+        No marker rotation.
+    */
 
     cubeGroup.rotation.x =
         FIXED_ROTATION_X;
@@ -2248,123 +1783,6 @@ function createHologramCube() {
 
     cubeGroup.rotation.z =
         FIXED_ROTATION_Z;
-}
-
-
-/* =========================================================
-   UPDATE AR POSITION
-========================================================= */
-
-function updateARFromMarker(data) {
-
-    if (!cubeGroup)
-        return;
-
-
-    const vw =
-        processingCanvas.width;
-
-
-    const vh =
-        processingCanvas.height;
-
-
-    const centerX =
-        data.x +
-        data.width / 2;
-
-
-    const centerY =
-        data.y +
-        data.height / 2;
-
-
-    const normalizedX =
-        centerX / vw;
-
-
-    const normalizedY =
-        centerY / vh;
-
-
-    const screenX =
-        (normalizedX - 0.5) * 2;
-
-
-    const screenY =
-        (0.5 - normalizedY) * 2;
-
-
-    /*
-     * Put cube slightly above marker.
-     */
-
-    const markerHeightNormalized =
-        data.height / vh;
-
-
-    const cubeX =
-        screenX;
-
-
-    const cubeY =
-        screenY +
-        markerHeightNormalized *
-        0.60;
-
-
-    /*
-     * Marker controls base size.
-     */
-
-    const markerScale =
-        Math.max(
-            0.30,
-            Math.min(
-                1.15,
-                data.width / 260
-            )
-        );
-
-
-    cubeGroup.position.x =
-        cubeX;
-
-
-    cubeGroup.position.y =
-        cubeY;
-
-
-    /*
-     * =====================================================
-     * PROPORTIONAL SCALE
-     *
-     * SAME SCALE X/Y/Z.
-     *
-     * Therefore cube can NEVER become stretched.
-     * =====================================================
-     */
-
-    const finalScale =
-        markerScale *
-        handScaleCurrent;
-
-
-    cubeGroup.scale.set(
-        finalScale,
-        finalScale,
-        finalScale
-    );
-
-
-    /*
-     * IMPORTANT:
-     *
-     * DO NOT reset rotation here.
-     *
-     * The fixed 3D rotation from createHologramCube()
-     * must remain.
-     */
 
 
     cubeGroup.visible =
@@ -2373,475 +1791,59 @@ function updateARFromMarker(data) {
 
 
 /* =========================================================
-   HIDE AR
+   MARKER LOOP
 ========================================================= */
 
-function hideAR() {
+function startMarkerDetection() {
 
-    if (cubeGroup) {
+    loadMarker();
 
-        cubeGroup.visible =
-            false;
-    }
-}
+    function loop() {
 
-
-/* =========================================================
-   THREE.JS ANIMATION
-========================================================= */
-
-function animateThree() {
-
-    requestAnimationFrame(
-        animateThree
-    );
-
-
-    const time =
-        performance.now();
-
-
-    /*
-     * =====================================================
-     * HAND SCALE SMOOTHING
-     * =====================================================
-     */
-
-    handScaleCurrent +=
-        (
-            handScaleTarget -
-            handScaleCurrent
-        ) *
-        0.12;
-
-
-    /*
-     * =====================================================
-     * COLOR ANIMATION
-     *
-     * ONLY COLOR CHANGES.
-     *
-     * CUBE ROTATION DOES NOT CHANGE.
-     * =====================================================
-     */
-
-    const hue =
-        (
-            time *
-            0.00008
-        ) % 1;
-
-
-    const color =
-        new THREE.Color();
-
-
-    color.setHSL(
-        hue,
-        1,
-        0.58
-    );
-
-
-    const secondColor =
-        new THREE.Color();
-
-
-    secondColor.setHSL(
-        (hue + 0.25) % 1,
-        1,
-        0.60
-    );
-
-
-    if (cubeEdges) {
-
-        cubeEdges.material.color
-            .copy(color);
-    }
-
-
-    if (hologramCube) {
-
-        hologramCube.material.color
-            .copy(color);
-    }
-
-
-    if (innerCube) {
-
-        innerCube.material.color
-            .copy(secondColor);
-    }
-
-
-    if (cubeGlow) {
-
-        cubeGlow.material.color
-            .copy(secondColor);
-    }
-
-
-    if (energyRing) {
-
-        energyRing.material.color
-            .copy(color);
-    }
-
-
-    if (scanRing) {
-
-        scanRing.material.color
-            .copy(secondColor);
-    }
-
-
-    /*
-     * =====================================================
-     * NO CUBE ROTATION HERE
-     *
-     * IMPORTANT:
-     *
-     * We intentionally DO NOT use:
-     *
-     * cubeGroup.rotation.x += ...
-     * cubeGroup.rotation.y += ...
-     *
-     * Cube stays fixed.
-     * =====================================================
-     */
-
-
-    /*
-     * =====================================================
-     * GLASS BODY SHINE
-     * =====================================================
-     */
-
-    if (hologramCube) {
-
-        hologramCube.material.opacity =
-            0.11 +
-            (
-                Math.sin(
-                    time * 0.004
-                ) + 1
-            ) *
-            0.035;
-    }
-
-
-    /*
-     * =====================================================
-     * CENTER GLOW PULSE
-     * =====================================================
-     */
-
-    if (cubeGlow) {
-
-        const glowScale =
-            1 +
-            Math.sin(
-                time * 0.006
-            ) *
-            0.35;
-
-
-        cubeGlow.scale.set(
-            glowScale,
-            glowScale,
-            glowScale
-        );
-    }
-
-
-    /*
-     * =====================================================
-     * ENERGY RINGS
-     *
-     * They can animate independently.
-     *
-     * The cube itself does NOT rotate.
-     * =====================================================
-     */
-
-    if (energyRing) {
-
-        energyRing.rotation.z =
-            time * 0.0012;
-    }
-
-
-    if (scanRing) {
-
-        scanRing.rotation.z =
-            -time * 0.001;
-    }
-
-
-    /*
-     * =====================================================
-     * CORNER POINT PULSE
-     * =====================================================
-     */
-
-    if (cornerPoints) {
-
-        cornerPoints.material.size =
-            0.085 +
-            Math.sin(
-                time * 0.006
-            ) *
-            0.025;
-    }
-
-
-    /*
-     * =====================================================
-     * PARTICLES
-     * =====================================================
-     */
-
-    if (particles) {
-
-        const data =
-            particles.userData.data;
-
-
-        const position =
-            particles.geometry
-            .attributes
-            .position;
-
-
-        const colors =
-            particles.geometry
-            .attributes
-            .color;
-
-
-        for (
-            let i = 0;
-            i < data.length;
-            i++
-        ) {
-
-            const p =
-                data[i];
-
-
-            p.angle +=
-                p.speed *
-                0.016;
-
-
-            position.array[
-                i * 3
-            ] =
-                Math.cos(
-                    p.angle
-                ) *
-                p.radius;
-
-
-            position.array[
-                i * 3 + 1
-            ] =
-                p.y +
-                Math.sin(
-                    time * 0.0008 +
-                    p.phase
-                ) *
-                0.03;
-
-
-            position.array[
-                i * 3 + 2
-            ] =
-                Math.sin(
-                    p.angle
-                ) *
-                p.radius;
-
-
-            const c =
-                new THREE.Color();
-
-
-            c.setHSL(
-                (
-                    hue +
-                    i / data.length * 0.5
-                ) % 1,
-                1,
-                0.60
-            );
-
-
-            colors.array[
-                i * 3
-            ] =
-                c.r;
-
-
-            colors.array[
-                i * 3 + 1
-            ] =
-                c.g;
-
-
-            colors.array[
-                i * 3 + 2
-            ] =
-                c.b;
+        if (arStarted) {
+            detectMarker();
         }
 
-
-        position.needsUpdate =
-            true;
-
-
-        colors.needsUpdate =
-            true;
-    }
-
-
-    /*
-     * =====================================================
-     * KEEP PROPER CUBE SCALE
-     * =====================================================
-     */
-
-    if (
-        cubeGroup &&
-        markerVisible &&
-        currentMarker
-    ) {
-
-        const markerScale =
-            Math.max(
-                0.30,
-                Math.min(
-                    1.15,
-                    currentMarker.width /
-                    260
-                )
-            );
-
-
-        const finalScale =
-            markerScale *
-            handScaleCurrent;
-
-
-        /*
-         * SAME VALUE X/Y/Z
-         */
-
-        cubeGroup.scale.set(
-            finalScale,
-            finalScale,
-            finalScale
+        requestAnimationFrame(
+            loop
         );
-
-
-        /*
-         * Re-apply fixed angle only.
-         *
-         * No rotation animation.
-         */
-
-        cubeGroup.rotation.x =
-            FIXED_ROTATION_X;
-
-        cubeGroup.rotation.y =
-            FIXED_ROTATION_Y;
-
-        cubeGroup.rotation.z =
-            FIXED_ROTATION_Z;
     }
 
-
-    renderer.render(
-        scene,
-        camera3D
-    );
+    loop();
 }
 
 
 /* =========================================================
-   RESIZE
+   MEDIAPIPE HANDS
 ========================================================= */
 
-function resizeThree() {
+let hands = null;
+let handCamera = null;
 
-    if (!renderer)
-        return;
-
-
-    renderer.setSize(
-        window.innerWidth,
-        window.innerHeight,
-        false
-    );
-}
-
-
-/* =========================================================
-   MEDIAPIPE HAND TRACKING
-========================================================= */
 
 function startHandTracking() {
 
-    if (
-        typeof Hands === "undefined"
-    ) {
-
-        console.warn(
-            "MediaPipe Hands not loaded"
-        );
-
-        return;
-    }
-
-
-    if (handRunning)
-        return;
-
-
-    handRunning =
-        true;
-
-
     hands =
         new Hands({
+            locateFile: function(file) {
 
-            locateFile:
-                function(file) {
-
-                    return (
-                        "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" +
-                        file
-                    );
-                }
-
+                return (
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" +
+                    file
+                );
+            }
         });
 
 
     hands.setOptions({
 
-        maxNumHands:
-            1,
+        maxNumHands: 1,
 
-        modelComplexity:
-            1,
+        modelComplexity: 1,
 
-        minDetectionConfidence:
-            0.55,
+        minDetectionConfidence: 0.55,
 
-        minTrackingConfidence:
-            0.55
-
+        minTrackingConfidence: 0.55
     });
 
 
@@ -2850,70 +1852,36 @@ function startHandTracking() {
     );
 
 
-    runHandLoop();
-}
+    /*
+        MediaPipe Camera utility uses
+        the already running video element.
+    */
 
+    handCamera =
+        new Camera(
+            video,
+            {
 
-/* =========================================================
-   HAND LOOP
-========================================================= */
+                onFrame: async function() {
 
-async function runHandLoop() {
+                    if (
+                        arStarted &&
+                        video.readyState >= 2
+                    ) {
 
-    if (
-        !cameraStarted ||
-        !hands
-    ) {
+                        await hands.send({
+                            image: video
+                        });
+                    }
+                },
 
-        setTimeout(
-            runHandLoop,
-            200
+                width: 640,
+                height: 480
+            }
         );
 
-        return;
-    }
 
-
-    const now =
-        performance.now();
-
-
-    /*
-     * Around 8 FPS hand processing.
-     */
-
-    if (
-        now -
-        lastHandProcess >
-        120
-    ) {
-
-        lastHandProcess =
-            now;
-
-
-        try {
-
-            await hands.send({
-
-                image:
-                    video
-
-            });
-
-        }
-        catch(error) {
-
-            console.warn(
-                "Hand frame skipped"
-            );
-        }
-    }
-
-
-    requestAnimationFrame(
-        runHandLoop
-    );
+    handCamera.start();
 }
 
 
@@ -2923,89 +1891,51 @@ async function runHandLoop() {
 
 function onHandResults(results) {
 
-    /*
-     * =====================================================
-     * NO HAND
-     * =====================================================
-     */
-
     if (
-        !results ||
         !results.multiHandLandmarks ||
         results.multiHandLandmarks.length === 0
     ) {
 
-        handDetected =
-            false;
-
+        handDetected = false;
 
         /*
-         * IMPORTANT:
-         *
-         * DO NOT reset handScaleTarget.
-         *
-         * Cube keeps its last size.
-         */
+            IMPORTANT:
 
-        handStatusText.textContent =
-            "Hand: Not detected";
+            Do NOT reset handScaleTarget.
 
+            Cube keeps its last hand-controlled size
+            until a hand appears again.
+        */
 
         return;
     }
-
-
-    /*
-     * =====================================================
-     * HAND FOUND
-     * =====================================================
-     */
-
-    handDetected =
-        true;
-
-
-    handStatusText.textContent =
-        "Hand: ✓ Detected • Scale control active";
 
 
     const landmarks =
         results.multiHandLandmarks[0];
 
 
-    /*
-     * Thumb = 4
-     *
-     * Index = 8
-     */
-
     const thumb =
         landmarks[4];
-
 
     const index =
         landmarks[8];
 
 
     /*
-     * =====================================================
-     * THUMB ↔ INDEX DISTANCE
-     * =====================================================
-     */
+        Distance between thumb tip
+        and index finger tip.
+    */
 
     const dx =
-        thumb.x -
-        index.x;
-
+        thumb.x - index.x;
 
     const dy =
-        thumb.y -
-        index.y;
-
+        thumb.y - index.y;
 
     const dz =
-        thumb.z -
-        index.z;
+        (thumb.z || 0) -
+        (index.z || 0);
 
 
     const distance =
@@ -3017,14 +1947,13 @@ function onHandResults(results) {
 
 
     /*
-     * =====================================================
-     * DISTANCE → SCALE
-     * =====================================================
-     */
+        Close fingers = small cube.
+
+        Far fingers = big cube.
+    */
 
     const minDistance =
         0.035;
-
 
     const maxDistance =
         0.25;
@@ -3042,39 +1971,37 @@ function onHandResults(results) {
 
 
     normalized =
-        Math.max(
+        clamp(
+            normalized,
             0,
-            Math.min(
-                1,
-                normalized
-            )
+            1
         );
 
 
     /*
-     * Small hand opening:
-     * smaller cube
-     *
-     * Large hand opening:
-     * bigger cube
-     */
+        Hand-controlled cube size.
 
-    const desiredScale =
-        0.35 +
+        X/Y/Z all receive exactly the
+        same value.
+    */
+
+    const minScale =
+        0.35;
+
+    const maxScale =
+        1.25;
+
+
+    handScaleTarget =
+        minScale +
         normalized *
-        1.45;
-
-
-    /*
-     * Smooth hand control.
-     */
-
-    handScaleTarget +=
         (
-            desiredScale -
-            handScaleTarget
-        ) *
-        0.45;
+            maxScale -
+            minScale
+        );
+
+
+    handDetected = true;
 }
 
 
@@ -3086,111 +2013,57 @@ startButton.addEventListener(
     "click",
     async function() {
 
-        startScreen.style.display =
-            "none";
-
-
-        if (!animationStarted) {
-
-            initThree();
+        if (arStarted) {
+            return;
         }
 
+        startButton.disabled =
+            true;
 
-        if (!markerLoaded) {
-
-            statusText.textContent =
-                "Loading marker...";
-
-
-            try {
-
-                await loadMarker();
-
-            }
-            catch(error) {
-
-                console.error(
-                    error
-                );
-
-
-                statusText.textContent =
-                    "Marker could not load";
-
-
-                return;
-            }
-        }
-
+        startButton.textContent =
+            "STARTING...";
 
         await startCamera();
-    }
-);
-
-
-/* =========================================================
-   PAGE LOAD
-========================================================= */
-
-window.addEventListener(
-    "load",
-    function() {
-
-        /*
-         * Three.js scene can initialize,
-         * but cube stays HIDDEN.
-         *
-         * Camera is NOT started here.
-         */
-
-        initThree();
-
-        waitForOpenCV();
 
     }
 );
 
 
 /* =========================================================
-   CLEANUP
+   INITIALIZE
 ========================================================= */
 
-window.addEventListener(
-    "beforeunload",
-    function() {
+initThree();
 
-        if (
-            video.srcObject
-        ) {
 
-            video.srcObject
-                .getTracks()
-                .forEach(
-                    track =>
-                        track.stop()
+/*
+    OpenCV loading.
+
+    OpenCV.js can take some time.
+*/
+
+if (
+    typeof cv !== "undefined"
+) {
+
+    if (
+        cv["onRuntimeInitialized"] !== undefined
+    ) {
+
+        cv["onRuntimeInitialized"] =
+            function() {
+
+                console.log(
+                    "OpenCV ready"
                 );
-        }
 
-
-        if (markerGray) {
-
-            markerGray.delete();
-
-            markerGray =
-                null;
-        }
-
-
-        if (markerEdge) {
-
-            markerEdge.delete();
-
-            markerEdge =
-                null;
-        }
-
+                /*
+                    Marker is loaded when
+                    AR starts.
+                */
+            };
     }
-);
+}
 
 </script>
 
