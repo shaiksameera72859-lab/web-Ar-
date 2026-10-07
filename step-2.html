@@ -49,6 +49,13 @@ body.lessonOn #instructions{opacity:0}
 #lessonPanel li{padding:4px 0;font-size:11.5px}
 #lessonCard .big{font-size:22px}
 #lessonCard .lines{font-size:14px}}
+/* Hide lesson UI but keep JS working */
+
+#lessonPanel,
+#lessonCard,
+#lessonDots{
+    display:none !important;
+}
 </style>
 </head>
 <body>
@@ -74,7 +81,7 @@ let arStarted=false,cvReady=false,handDetected=false,hT=.72,hC=.72,seenKey=null,
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 const UP=V3(0,1,0);
-const FIX_X=-.3,FIX_Y=.52,SPIN=.5,GRACE=350,EXTRA=600,THR=.5;
+const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=350,EXTRA=600,THR=.5;
 const SIDE_LENGTH=5,VOLUME=125,FACE_AREA=25,SURFACE=150;     // cube (cm)
 const PB=6,PH=4,PS=5,PVOL=48,PBASE=36,PTRI=15,PSURF=96;       // pyramid (cm): 6x6 base, h=4, slant=5
 
@@ -204,13 +211,14 @@ function cubeDef(){
    return["Dimensions",p>.7?"Length = Width = Height":"Dimensions",L]}}]}}}
 
 function pyramidDef(){
- const y0=-PH/PB/2,y1=PH/PB/2; // base side = 1 unit (6 cm)
+ const y0=-0.5;
+const y1=0.9; // base side = 1 unit (6 cm)
  return{key:"pyramid",name:"Triangular Pyramid",marker:"assets/marker_pyramid.png",sub:"A triangular pyramid with four triangular faces",
- V:[
- V3(-0.6,y0,-0.35),
- V3(0.6,y0,-0.35),
- V3(0,y0,0.7),
- V3(0,y1,0)
+V:[
+ V3(-0.5,-0.5,-0.45),
+ V3( 0.5,-0.5,-0.45),
+ V3( 0.0,-0.5, 0.55),
+ V3( 0.0, 1.2, 0.0)
 ],
 E:[
  [0,1],
@@ -394,7 +402,7 @@ function lessonFrame(t){
   else if(cur)cur.t0+=dt*1000;
   return}
  else{root.visible=false;return}
- spinY+=SPIN*dt;const S=SHAPES[shownKey];S.g.rotation.set(FIX_X,spinY,0);
+ spinY+=SPIN*dt;const S=SHAPES[shownKey];S.g.rotation.set(-0.1,spinY,0);
  updateLesson(now,t)}
 
 function animate(){
