@@ -60,7 +60,7 @@ body.lessonOn #instructions{opacity:0}
 <video id="camera" autoplay playsinline muted></video>
 <canvas id="threeCanvas"></canvas>
 <canvas id="proc"></canvas>
-<div id="status">Waiting for AR...</div>
+<div id="status">Loading AR System...</div>
 <div id="instructions">Show the CUBE marker or the PYRAMID marker. Pinch thumb + index finger to resize the hologram.</div>
 <button id="muteBtn" title="Voice on/off">🔊</button>
 <div id="lessonDots"></div>
@@ -79,14 +79,13 @@ let arStarted=false,cvReady=false,handDetected=false,hT=.72,hC=.72,seenKey=null,
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 const UP=V3(0,1,0);
-const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=300,EXTRA=400,THR=.70; 
+const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=200,EXTRA=200; 
+const THR=.72; // Increased threshold for strict detection
 let matchCounter=0, pendingKey=null;
-const MIN_MATCHES=2; 
-
 const SIDE_LENGTH=5,VOLUME=125,FACE_AREA=25,SURFACE=150;     // cube (cm)
 const PB=6,PH=4,PS=5,PVOL=48,PBASE=36,PTRI=15,PSURF=96;       // pyramid (cm)
 
-/* ALL voice text live here */
+/* ALL voice text lives here */
 const LESSON_TEXT={
  cube:{
    intro:"This is a cube.",
@@ -164,7 +163,7 @@ const setVL=(S,i,hot)=>S.vl[i].userData.draw("V"+(i+1),hot?"#ffe600":"#bfffee",h
 
 function cubeDef(){
  const h=.5;
- return{key:"cube",name:"Cube",marker:"assets/marker.png",sub:"A 3D shape with equal square faces",
+ return{key:"cube",name:"Cube",marker:"./assets/marker.png",sub:"A 3D shape with equal square faces",
  V:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].map(a=>V3(a[0]*h,a[1]*h,a[2]*h)),
  E:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
  F:[[4,5,6,7],[1,2,6,5],[0,3,2,1],[0,4,7,3],[3,7,6,2],[0,1,5,4]].map((i,k)=>({i:i,c:FACE_COLS[k]})),
@@ -211,7 +210,7 @@ function cubeDef(){
 
 function pyramidDef(){
  const y0=-0.5, y1=0.9;
- return{key:"pyramid",name:"Triangular Pyramid",marker:"assets/marker_pyramid.png",sub:"A triangular pyramid with four triangular faces",
+ return{key:"pyramid",name:"Triangular Pyramid",marker:"./assets/marker_pyramid.png",sub:"A triangular pyramid with four triangular faces",
  V:[
   V3(-0.5,-0.5,-0.45),
   V3( 0.5,-0.5,-0.45),
@@ -385,17 +384,22 @@ function lessonFrame(t){
  if(vis){
   lostSince=0;root.visible=true;
   if(shownKey!==seenKey){if(shownKey)resetLesson();shownKey=seenKey;spinY=FIX_Y;startLesson(shownKey)}
-  setStatus("✓ "+SHAPES[shownKey].name+" marker detected");
+  setStatus("✓ "+SHAPES[shownKey].name+" detected");
  }else if(shownKey){
   if(!lostSince)lostSince=now;
   if(now-lostSince>EXTRA){resetLesson();shownKey=null;seenKey=null;lostSince=0;root.visible=false;setStatus("Searching for marker...")}
   else if(cur)cur.t0+=dt*1000;
   return}
  else{
-  root.visible=false;
+  root.visible = false;
+  seenKey = null;
+  if(shownKey) {
+    resetLesson();
+    shownKey = null;
+  }
   stopVoice(); 
   setStatus("Searching for marker...");
-  return
+  return;
  }
  spinY+=SPIN*dt;const S=SHAPES[shownKey];S.g.rotation.set(-0.1,spinY,0);
  updateLesson(now,t)}
@@ -416,54 +420,57 @@ async function startCamera(){
   try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false})}
   catch(e){cameraStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false})}
   video.srcObject=cameraStream;await video.play();arStarted=true;startScreen.style.display="none";
-  setStatus("Camera ready — show marker");startMarkerDetection();startHandTracking();
+  setStatus("Camera Ready — Show Marker");startMarkerDetection();startHandTracking();
  }catch(e){console.error(e);setStatus("Camera permission required")}}
 
-/* ---------- MARKER DETECTION (Strict filtering) ---------- */
-const SCALES=[.25,.35,.5,.7,1,1.4];
+/* ---------- MARKER DETECTION (Mobile-Optimized) ---------- */
+const SCALES=[.2,.3,.4,.5,.6,.8,1.0];
+let loadedCount=0;
 function loadMarkers(){
  Object.values(SHAPES).forEach(S=>{
   const im=new Image();
   im.onload=()=>{try{
-   const sc=Math.min(1,200/Math.max(im.width,im.height)),c=document.createElement("canvas");
+   const sc=Math.min(1,180/Math.max(im.width,im.height)),c=document.createElement("canvas");
    c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-   const m=cv.imread(c),g=new cv.Mat();cv.cvtColor(m,g,cv.COLOR_RGBA2GRAY);m.delete();S.tpl=g;cvReady=true;
+   const m=cv.imread(c),g=new cv.Mat();cv.cvtColor(m,g,cv.COLOR_RGBA2GRAY);m.delete();S.tpl=g;cvReady=true;loadedCount++;
+   setStatus("Markers Ready ("+loadedCount+"/2)");
    console.log("Marker loaded:",S.key)}catch(e){console.error("OpenCV marker error:",e)}};
-  im.onerror=()=>{console.warn("Marker not found:",S.marker);setStatus("Marker image not found: "+S.marker)};
+  im.onerror=()=>{console.warn("Marker not found:",S.marker);setStatus("Error loading: "+S.marker)};
   im.src=S.marker})}
 
 function detectMarker(){
  if(!arStarted||!cvReady||video.readyState<2||!video.videoWidth)return;
- const W=480,H=Math.round(W*video.videoHeight/video.videoWidth);pc.width=W;pc.height=H;
+ const W=360, H=Math.round(W*(video.videoHeight||720)/(video.videoWidth||1280));
+ pc.width=W;pc.height=H;
  pc.getContext("2d",{willReadFrequently:true}).drawImage(video,0,0,W,H);
  let frame;try{frame=cv.imread(pc)}catch(e){return}
  const gray=new cv.Mat();cv.cvtColor(frame,gray,cv.COLOR_RGBA2GRAY);frame.delete();
  let best={s:-1};
  for(const key in SHAPES){const T=SHAPES[key].tpl;if(!T)continue;
   for(const sc of SCALES){
-   const w=Math.round(T.cols*sc),h=Math.round(T.rows*sc);if(w<24||h<24||w>=W||h>=H)continue;
+   const w=Math.round(T.cols*sc),h=Math.round(T.rows*sc);if(w<16||h<16||w>=W||h>=H)continue;
    const r=new cv.Mat(),res=new cv.Mat();
    try{cv.resize(T,r,new cv.Size(w,h),0,0,cv.INTER_AREA);cv.matchTemplate(gray,r,res,cv.TM_CCOEFF_NORMED);
     const mm=cv.minMaxLoc(res);if(mm.maxVal>best.s)best={s:mm.maxVal,key:key,x:mm.maxLoc.x,y:mm.maxLoc.y,w:w,h:h}}catch(e){}
    r.delete();res.delete()}}
  gray.delete();
 
- // Strict Verification
- if(best.s>=THR){
-  if(pendingKey===best.key){
+ if(best.s >= THR){
+  if(pendingKey === best.key){
     matchCounter++;
-  }else{
-    pendingKey=best.key;
-    matchCounter=1;
+  } else {
+    pendingKey = best.key;
+    matchCounter = 1;
   }
-  if(matchCounter>=MIN_MATCHES){
-    seenKey=best.key;
-    lastSeen=performance.now();
+  // Kam se kam 3 lagatar frames par 72%+ match hone par hi trigger hoga
+  if(matchCounter >= 3){ 
+    seenKey = best.key;
+    lastSeen = performance.now();
     placeShape(best,W,H);
   }
- }else{
-  matchCounter=0;
-  pendingKey=null;
+ } else {
+  matchCounter = 0;
+  pendingKey = null;
  }}
 
 function placeShape(b,W,H){
@@ -471,13 +478,13 @@ function placeShape(b,W,H){
  const cx=(sx-.5)*2,cy=(.5-sy)*2+mh*.6;
  root.position.set(cx*2.7,cy*2.1,0);
  if(!handDetected)hT=clamp(mh/.32,.55,1.1)*.72}
-function startMarkerDetection(){loadMarkers();(function loop(){if(arStarted)detectMarker();setTimeout(loop,110)})()}
+function startMarkerDetection(){loadMarkers();(function loop(){if(arStarted)detectMarker();setTimeout(loop,120)})()}
 
-/* ---------- MEDIAPIPE HANDS (No camera collision) ---------- */
+/* ---------- MEDIAPIPE HANDS ---------- */
 let hands=null, isHandProcessing=false;
 function startHandTracking(){
  hands=new Hands({locateFile:f=>"https://cdn.jsdelivr.net/npm/@mediapipe/hands/"+f});
- hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:.45,minTrackingConfidence:.45});
+ hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:.4,minTrackingConfidence:.4});
  hands.onResults(onHandResults);
  
  async function handLoop(){
@@ -486,7 +493,7 @@ function startHandTracking(){
      try{await hands.send({image:video});}catch(e){}
      isHandProcessing=false;
    }
-   setTimeout(handLoop,120);
+   setTimeout(handLoop,150);
  }
  handLoop();
 }
