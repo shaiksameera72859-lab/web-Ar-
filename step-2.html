@@ -60,7 +60,7 @@ body.lessonOn #instructions{opacity:0}
 <video id="camera" autoplay playsinline muted></video>
 <canvas id="threeCanvas"></canvas>
 <canvas id="proc"></canvas>
-<div id="status">Waiting for AR...</div>
+<div id="status">NONE</div>
 <div id="instructions">Show the CUBE marker or the PYRAMID marker. Pinch thumb + index finger to resize the hologram.</div>
 <button id="muteBtn" title="Voice on/off">🔊</button>
 <div id="lessonDots"></div>
@@ -79,10 +79,10 @@ let arStarted=false,cvReady=false,handDetected=false,hT=.72,hC=.72,seenKey=null,
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 const UP=V3(0,1,0);
-const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=250,EXTRA=300; 
-const THR=.58; // Laptop aur Phone dono ke liye optimal threshold
+const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=400,EXTRA=400; 
+const THR=.56; // Strict threshold to prevent face/table false triggers
 let matchCounter=0, pendingKey=null;
-const MIN_MATCHES=2; // Smooth cross-platform recognition
+const MIN_MATCHES=3; // Ab 4 consecutive frames zaroori hain taaki random glitch ignore ho jaye
 
 const SIDE_LENGTH=5,VOLUME=125,FACE_AREA=25,SURFACE=150;     // cube (cm)
 const PB=6,PH=4,PS=5,PVOL=48,PBASE=36,PTRI=15,PSURF=96;       // pyramid (cm)
@@ -382,25 +382,27 @@ function setStatus(s){if(s!==lastStatus){lastStatus=s;stEl.textContent=s}}
 
 function lessonFrame(t){
  const now=performance.now(),dt=Math.min(.1,(now-lastNow)/1000||.016);lastNow=now;
- const vis=seenKey&&now-lastSeen<GRACE;
+ // Agar marker abhi detect hua hai ya grace period ke andar hai toh visible rakhein
+ const vis=seenKey && (now-lastSeen < (GRACE + 200));
+ 
  if(vis){
   lostSince=0;root.visible=true;
-  if(shownKey!==seenKey){if(shownKey)resetLesson();shownKey=seenKey;spinY=FIX_Y;startLesson(shownKey)}
+  if(shownKey!==seenKey){
+    if(shownKey)resetLesson();
+    shownKey=seenKey;
+    spinY=FIX_Y;
+    startLesson(shownKey);
+  }
   setStatus("✓ "+SHAPES[shownKey].name+" detected");
- }else if(shownKey){
-  if(!lostSince)lostSince=now;
-  if(now-lostSince>EXTRA){resetLesson();shownKey=null;seenKey=null;lostSince=0;root.visible=false;setStatus("Searching for marker...")}
-  else if(cur)cur.t0+=dt*1000;
-  return}
- else{
+ }else{
   root.visible=false;
-  seenKey=null;
-  if(shownKey){
+  if(shownKey || seenKey){
     resetLesson();
     shownKey=null;
+    seenKey=null;
   }
   stopVoice(); 
-  setStatus("Searching for marker...");
+  setStatus("NONE");
   return;
  }
  spinY+=SPIN*dt;const S=SHAPES[shownKey];S.g.rotation.set(-0.1,spinY,0);
@@ -417,27 +419,31 @@ function animate(){
 /* ---------- CAMERA ---------- */
 let cameraStream=null;
 async function startCamera(){
- setStatus("Starting camera...");
+ setStatus("NONE");
  try{
   try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false})}
   catch(e){cameraStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false})}
   video.srcObject=cameraStream;await video.play();arStarted=true;startScreen.style.display="none";
-  setStatus("Camera Ready — Show Marker");startMarkerDetection();startHandTracking();
+  setStatus("NONE");startMarkerDetection();startHandTracking();
  }catch(e){console.error(e);setStatus("Camera permission required")}}
 
-/* ---------- MARKER DETECTION ---------- */
-const SCALES=[.15,.22,.3,.4,.5,.65,.8,1.0];
+/* ---------- MARKER DETECTION (Strict Multi-Frame Validation) ---------- */
+const SCALES=[.18,.25,.35,.5,.7,.9,1.0];
 let loadedCount=0;
 function loadMarkers(){
  Object.values(SHAPES).forEach(S=>{
   const im=new Image();
   im.onload=()=>{try{
    const sc=Math.min(1,180/Math.max(im.width,im.height)),c=document.createElement("canvas");
-   c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-   const m=cv.imread(c),g=new cv.Mat();cv.cvtColor(m,g,cv.COLOR_RGBA2GRAY);m.delete();S.tpl=g;cvReady=true;loadedCount++;
-   setStatus("Markers Ready ("+loadedCount+"/2)");
+   c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+   c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+   const m=cv.imread(c),g=new cv.Mat();
+   cv.cvtColor(m,g,cv.COLOR_RGBA2GRAY);
+   m.delete();
+   S.tpl=g;cvReady=true;loadedCount++;
+   setStatus("NONE");
    console.log("Marker loaded:",S.key)}catch(e){console.error("OpenCV marker error:",e)}};
-  im.onerror=()=>{console.warn("Marker not found:",S.marker);setStatus("Error loading: "+S.marker)};
+  im.onerror=()=>{console.warn("Marker not found:",S.marker);setStatus("NONE")};
   im.src=S.marker})}
 
 function detectMarker(){
@@ -446,15 +452,22 @@ function detectMarker(){
  pc.width=W;pc.height=H;
  pc.getContext("2d",{willReadFrequently:true}).drawImage(video,0,0,W,H);
  let frame;try{frame=cv.imread(pc)}catch(e){return}
- const gray=new cv.Mat();cv.cvtColor(frame,gray,cv.COLOR_RGBA2GRAY);frame.delete();
+ const gray=new cv.Mat();
+ cv.cvtColor(frame,gray,cv.COLOR_RGBA2GRAY);
+ frame.delete();
+
  let best={s:-1};
  for(const key in SHAPES){const T=SHAPES[key].tpl;if(!T)continue;
   for(const sc of SCALES){
    const w=Math.round(T.cols*sc),h=Math.round(T.rows*sc);if(w<16||h<16||w>=W||h>=H)continue;
    const r=new cv.Mat(),res=new cv.Mat();
-   try{cv.resize(T,r,new cv.Size(w,h),0,0,cv.INTER_AREA);cv.matchTemplate(gray,r,res,cv.TM_CCOEFF_NORMED);
-    const mm=cv.minMaxLoc(res);if(mm.maxVal>best.s)best={s:mm.maxVal,key:key,x:mm.maxLoc.x,y:mm.maxLoc.y,w:w,h:h}}catch(e){}
-   r.delete();res.delete()}}
+   try{
+    cv.resize(T,r,new cv.Size(w,h),0,0,cv.INTER_AREA);
+    cv.matchTemplate(gray,r,res,cv.TM_CCOEFF_NORMED);
+    const mm=cv.minMaxLoc(res);if(mm.maxVal>best.s)best={s:mm.maxVal,key:key,x:mm.maxLoc.x,y:mm.maxLoc.y,w:w,h:h}
+   }catch(e){}
+   r.delete();res.delete()}
+  }
  gray.delete();
 
  if(best.s >= THR){
@@ -464,6 +477,7 @@ function detectMarker(){
     pendingKey = best.key;
     matchCounter = 1;
   }
+  // Ab lagatar 4 frames tak match hone par hi trigger hoga, face/table ka glitch turant drop ho jayega
   if(matchCounter >= MIN_MATCHES){ 
     seenKey = best.key;
     lastSeen = performance.now();
@@ -481,7 +495,7 @@ function placeShape(b,W,H){
  if(!handDetected)hT=clamp(mh/.32,.55,1.1)*.72}
 function startMarkerDetection(){loadMarkers();(function loop(){if(arStarted)detectMarker();setTimeout(loop,120)})()}
 
-/* ---------- MEDIAPIPE HANDS (Camera Error Fixed) ---------- */
+/* ---------- MEDIAPIPE HANDS ---------- */
 let hands=null, isHandProcessing=false;
 function startHandTracking(){
  hands=new Hands({locateFile:f=>"https://cdn.jsdelivr.net/npm/@mediapipe/hands/"+f});
@@ -513,7 +527,6 @@ initThree();
 </script>
 </body>
 </html>
-
 
 
 
