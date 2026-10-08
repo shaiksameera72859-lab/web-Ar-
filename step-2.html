@@ -60,7 +60,7 @@ body.lessonOn #instructions{opacity:0}
 <video id="camera" autoplay playsinline muted></video>
 <canvas id="threeCanvas"></canvas>
 <canvas id="proc"></canvas>
-<div id="status">Loading AR System...</div>
+<div id="status">Waiting for AR...</div>
 <div id="instructions">Show the CUBE marker or the PYRAMID marker. Pinch thumb + index finger to resize the hologram.</div>
 <button id="muteBtn" title="Voice on/off">🔊</button>
 <div id="lessonDots"></div>
@@ -79,9 +79,11 @@ let arStarted=false,cvReady=false,handDetected=false,hT=.72,hC=.72,seenKey=null,
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
 const UP=V3(0,1,0);
-const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=200,EXTRA=200; 
-const THR=.72; // Increased threshold for strict detection
+const FIX_X=-0.1,FIX_Y=.52,SPIN=.5,GRACE=250,EXTRA=300; 
+const THR=.58; // Laptop aur Phone dono ke liye optimal threshold
 let matchCounter=0, pendingKey=null;
+const MIN_MATCHES=2; // Smooth cross-platform recognition
+
 const SIDE_LENGTH=5,VOLUME=125,FACE_AREA=25,SURFACE=150;     // cube (cm)
 const PB=6,PH=4,PS=5,PVOL=48,PBASE=36,PTRI=15,PSURF=96;       // pyramid (cm)
 
@@ -391,11 +393,11 @@ function lessonFrame(t){
   else if(cur)cur.t0+=dt*1000;
   return}
  else{
-  root.visible = false;
-  seenKey = null;
-  if(shownKey) {
+  root.visible=false;
+  seenKey=null;
+  if(shownKey){
     resetLesson();
-    shownKey = null;
+    shownKey=null;
   }
   stopVoice(); 
   setStatus("Searching for marker...");
@@ -423,8 +425,8 @@ async function startCamera(){
   setStatus("Camera Ready — Show Marker");startMarkerDetection();startHandTracking();
  }catch(e){console.error(e);setStatus("Camera permission required")}}
 
-/* ---------- MARKER DETECTION (Mobile-Optimized) ---------- */
-const SCALES=[.2,.3,.4,.5,.6,.8,1.0];
+/* ---------- MARKER DETECTION ---------- */
+const SCALES=[.15,.22,.3,.4,.5,.65,.8,1.0];
 let loadedCount=0;
 function loadMarkers(){
  Object.values(SHAPES).forEach(S=>{
@@ -462,8 +464,7 @@ function detectMarker(){
     pendingKey = best.key;
     matchCounter = 1;
   }
-  // Kam se kam 3 lagatar frames par 72%+ match hone par hi trigger hoga
-  if(matchCounter >= 3){ 
+  if(matchCounter >= MIN_MATCHES){ 
     seenKey = best.key;
     lastSeen = performance.now();
     placeShape(best,W,H);
@@ -480,7 +481,7 @@ function placeShape(b,W,H){
  if(!handDetected)hT=clamp(mh/.32,.55,1.1)*.72}
 function startMarkerDetection(){loadMarkers();(function loop(){if(arStarted)detectMarker();setTimeout(loop,120)})()}
 
-/* ---------- MEDIAPIPE HANDS ---------- */
+/* ---------- MEDIAPIPE HANDS (Camera Error Fixed) ---------- */
 let hands=null, isHandProcessing=false;
 function startHandTracking(){
  hands=new Hands({locateFile:f=>"https://cdn.jsdelivr.net/npm/@mediapipe/hands/"+f});
@@ -512,7 +513,6 @@ initThree();
 </script>
 </body>
 </html>
-
 
 
 
